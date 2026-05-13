@@ -1,0 +1,16 @@
+{
+  "Auth": {
+    "title": "Welcome Back",
+    "login": "Sign in with Google"
+  },
+  "Onboarding": {
+    "title": "Setup Your Profile",
+    "subtitle": "Please enter your employment details to continue",
+    "fullName": "Full Name",
+    "designation": "Designation",
+    "cardNo": "Record Card No:",
+    "salary": "Basic Salary",
+    "save": "Complete Setup",
+    "uploadPhoto": "Upload Profile Picture"
+  }
+}
