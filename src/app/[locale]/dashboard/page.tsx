@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { AddOvertimeForm } from '@/components/AddOvertimeForm';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { GeneratePdfButton } from '@/components/GeneratePdfButton';
 
 export default async function DashboardPage({
   params
@@ -44,9 +46,14 @@ export default async function DashboardPage({
                 Hamad School
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
+              
+              {/* Language Switcher in Dashboard Navbar */}
+              <LanguageSwitcher />
+
+              {/* Sign Out Button using Server Action */}
               <form action={signOut}>
-                <button type="submit" className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors">
+                <button type="submit" className="text-sm font-bold text-red-600 hover:text-red-800 transition-colors">
                   {t('signOut')}
                 </button>
               </form>
@@ -59,7 +66,7 @@ export default async function DashboardPage({
         
         {/* Welcome Header */}
         <div className="flex items-center space-x-6 mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-200 border-4 border-white shadow-md flex-shrink-0">
+          <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-200 border-4 border-white shadow-md shrink-0">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
             ) : (
@@ -85,7 +92,12 @@ export default async function DashboardPage({
           {/* Right Column: History (Takes up 2/3 width on large screens) */}
           <div className="lg:col-span-2">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">{tOt('historyTitle')}</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">{tOt('historyTitle')}</h3>
+                
+                {/* The Generate PDF Button with TypeScript null check fix */}
+                <GeneratePdfButton profile={profile} slips={slips || []} />
+              </div>
               
               {slips && slips.length > 0 ? (
                 <div className="overflow-x-auto">

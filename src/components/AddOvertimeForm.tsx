@@ -24,9 +24,13 @@ export function AddOvertimeForm({ userId }: { userId: string }) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Capture the form reference BEFORE the async await happens
+    const form = e.currentTarget;
+    
     setLoading(true);
     
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const date = formData.get('date') as string;
     const start = formData.get('startTime') as string;
     const end = formData.get('endTime') as string;
@@ -44,7 +48,7 @@ export function AddOvertimeForm({ userId }: { userId: string }) {
     });
 
     if (!error) {
-      e.currentTarget.reset();
+      form.reset(); // Use the captured reference here
       router.refresh(); // This tells Next.js to re-fetch the server component so the new slip appears!
     } else {
       alert("Error submitting slip: " + error.message);
