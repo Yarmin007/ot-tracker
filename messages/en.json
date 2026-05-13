@@ -12,5 +12,25 @@
     "salary": "Basic Salary",
     "save": "Complete Setup",
     "uploadPhoto": "Upload Profile Picture"
+  },
+  "Dashboard": {
+    "title": "Overview",
+    "welcome": "Welcome back",
+    "designation": "Designation",
+    "cardNo": "Record Card No",
+    "salary": "Basic Salary",
+    "signOut": "Sign Out"
+  },
+  "Overtime": {
+    "addTitle": "Add Overtime",
+    "historyTitle": "My Overtime Slips",
+    "date": "Date",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "totalHours": "Total Hours",
+    "reason": "Reason for Overtime",
+    "submit": "Submit Request",
+    "status": "Status",
+    "noSlips": "No overtime slips found."
   }
 }

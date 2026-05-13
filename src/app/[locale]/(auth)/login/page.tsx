@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
   const t = useTranslations('Auth');
@@ -29,12 +30,13 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            {t('title')}
+        <div className="text-center flex flex-col items-center">
+          <Logo className="w-24 h-24 mb-4 drop-shadow-sm" />
+          <h2 className="text-3xl font-extrabold text-[#991525] uppercase tracking-wider">
+            Hamad School
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Securely sign in to manage your overtime
+          <p className="mt-2 text-sm text-gray-600 font-medium">
+            {t('title')}
           </p>
         </div>
 
@@ -42,7 +44,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="group relative flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+            className="group relative flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#991525] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
           >
             <span className="absolute inset-y-0 left-0 flex items-center pl-3">
               {/* Standard Google "G" Logo SVG */}
