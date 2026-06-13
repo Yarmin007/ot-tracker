@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* 1. Load the Faruma Font */
+@font-face {
+  font-family: 'Faruma';
+  src: url('/fonts/Faruma.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,6 +19,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* 2. Make it a Tailwind utility so you can use class="font-faruma" anywhere */
+  --font-faruma: 'Faruma', Arial, Helvetica, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
