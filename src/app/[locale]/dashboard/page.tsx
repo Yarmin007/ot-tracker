@@ -9,8 +9,8 @@ import { SvgOtSheet } from '@/components/SvgOtSheet';
 import { DeleteSubmitButton } from '@/components/DeleteSubmitButton';
 import { revalidatePath } from 'next/cache';
 
-// Helper function to group by the 16th-to-15th Payroll Cycle
-const getPayrollCycle = (dateStr: string) => {
+// Helper function to group by the 16th-to-15th Payroll Cycle with structural locale localization labels
+const getPayrollCycle = (dateStr: string, locale: string, tOt: any) => {
   const d = new Date(dateStr);
   let year = d.getFullYear();
   let month = d.getMonth(); 
@@ -33,7 +33,13 @@ const getPayrollCycle = (dateStr: string) => {
     prevYear -= 1;
   }
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const label = `16 ${months[prevMonth]} ${prevYear} - 15 ${months[month]} ${year}`;
+  
+  const prevMonthLabel = locale === 'dv' ? tOt(`months.${months[prevMonth]}`) : months[prevMonth];
+  const currentMonthLabel = locale === 'dv' ? tOt(`months.${months[month]}`) : months[month];
+
+  const label = locale === 'dv' 
+    ? `${prevYear} ${prevMonthLabel} 16 - ${year} ${currentMonthLabel} 15`
+    : `16 ${prevMonthLabel} ${prevYear} - 15 ${currentMonthLabel} ${year}`;
 
   return { id: periodId, label };
 };
@@ -65,7 +71,7 @@ export default async function DashboardPage({
   const groupedPeriods = new Map<string, { id: string, label: string, slips: any[], totalHours: number }>();
 
   (allSlips || []).forEach(slip => {
-    const { id, label } = getPayrollCycle(slip.date);
+    const { id, label } = getPayrollCycle(slip.date, locale, tOt);
     if (!groupedPeriods.has(id)) {
       groupedPeriods.set(id, { id, label, slips: [], totalHours: 0 });
     }
@@ -114,7 +120,7 @@ export default async function DashboardPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]" dir={locale === 'dv' ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-[#F8FAFC] ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`} dir={locale === 'dv' ? 'rtl' : 'ltr'}>
       
       {/* Sleek Navigation */}
       <nav className="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
@@ -122,14 +128,14 @@ export default async function DashboardPage({
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3 space-x-reverse">
               <Logo className="w-10 h-10" />
-              <h1 className="text-xl font-extrabold text-[#991525] tracking-wide uppercase">
-                Hamad School
+              <h1 className="text-xl md:text-2xl font-extrabold text-[#991525] tracking-wide uppercase font-dhivehi">
+                {locale === 'dv' ? 'ހަމަދު ސުކޫލް' : 'Hamad School'}
               </h1>
             </div>
             <div className="flex items-center space-x-6 space-x-reverse">
               <LanguageSwitcher />
               <form action={signOut}>
-                <button type="submit" className="text-sm font-bold text-gray-600 hover:text-[#991525] transition-colors">
+                <button type="submit" className="text-base font-bold text-gray-600 hover:text-[#991525] transition-colors">
                   {t('signOut')}
                 </button>
               </form>
@@ -144,17 +150,13 @@ export default async function DashboardPage({
         <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200 mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           
           <div className="flex flex-col">
-            <h3 className="text-[#991525] font-extrabold uppercase tracking-widest text-xs mb-1">Current Cycle Overview</h3>
-            <p className="text-2xl font-bold text-gray-900 mb-4">{activePeriod?.label || 'No period selected'}</p>
+            <h3 className="text-[#991525] font-extrabold uppercase tracking-widest text-xs md:text-sm mb-1">{tOt('currentCycleOverview')}</h3>
+            <p className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{activePeriod?.label || 'No period selected'}</p>
             
             <div className="flex gap-8">
               <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Total OT Slips</p>
-                <p className="text-3xl font-extrabold text-gray-900">{activePeriod?.slips.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">Claimed Hours</p>
-                <p className="text-3xl font-extrabold text-[#991525]">{activePeriod?.totalHours || 0} <span className="text-lg text-gray-400 font-medium">hrs</span></p>
+                <p className="text-gray-500 text-base font-medium mb-1">{tOt('claimedHours')}</p>
+                <p className="text-3xl md:text-4xl font-extrabold text-[#991525]">{activePeriod?.totalHours || 0} <span className="text-lg md:text-xl text-gray-400 font-medium">{tOt('h')}</span></p>
               </div>
             </div>
           </div>
@@ -163,7 +165,7 @@ export default async function DashboardPage({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
             <div className="relative min-w-[200px]">
               <select 
-                className="appearance-none bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-[#991525] focus:border-[#991525] block w-full px-4 py-3 pr-10 font-bold shadow-sm"
+                className="appearance-none bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-xl focus:ring-[#991525] focus:border-[#991525] block w-full px-4 py-3 pr-10 font-bold shadow-sm"
                 defaultValue={activePeriodId || ''}
               >
                 {periods.map(p => (
@@ -177,24 +179,29 @@ export default async function DashboardPage({
             
             <Link 
               href={`/${locale}/dashboard?period=${activePeriodId}&modal=add`}
-              className="flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-black transition-colors shadow-sm gap-2"
+              className="flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-black transition-colors shadow-sm gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
               {tOt('addTitle')}
             </Link>
 
             <Link 
               href={`/${locale}/dashboard?period=${activePeriodId}&view=preview`}
-              className="flex items-center justify-center bg-white border border-gray-200 text-gray-700 px-5 py-3 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center justify-center bg-white border border-gray-200 text-gray-700 px-5 py-3 rounded-xl text-base font-bold hover:bg-gray-50 transition-colors shadow-sm"
             >
-              Preview Sheet
+              {tOt('sheetPreview')}
             </Link>
 
             <a 
               href={`/api/export?period=${activePeriodId || ''}`}
-              className="flex items-center justify-center bg-[#991525] text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#7a111e] transition-colors shadow-sm gap-2"
+              className="flex items-center justify-center bg-[#991525] text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-[#7a111e] transition-colors shadow-sm gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
               Export
             </a>
           </div>
@@ -203,14 +210,13 @@ export default async function DashboardPage({
         {/* The 21-Column Full Width Table - Styled to Hamad School Branding */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
           <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-            <h3 className="text-lg font-extrabold text-gray-900">{tOt('historyTitle')}</h3>
-            <span className="text-xs font-bold text-[#991525] bg-[#991525]/10 px-3 py-1 rounded-full">21 Columns</span>
+            <h3 className="text-xl font-extrabold text-gray-900">{tOt('historyTitle')}</h3>
           </div>
 
           {activePeriod && activePeriod.slips.length > 0 ? (
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="min-w-max w-full divide-y divide-gray-200 border-collapse text-sm">
-                <thead className="bg-white text-[10px] text-gray-600 uppercase font-extrabold text-center tracking-wider">
+              <table className="min-w-max w-full divide-y divide-gray-200 border-collapse text-base md:text-lg">
+                <thead className="bg-white text-xs md:text-sm text-gray-600 uppercase font-extrabold text-center tracking-wider">
                   {/* Row 1 Headers */}
                   <tr>
                     <th rowSpan={3} className="sticky left-0 z-20 bg-white border-b-2 border-r border-gray-200 px-4 py-3 align-middle shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{tOt('date')}</th>
@@ -219,10 +225,10 @@ export default async function DashboardPage({
                     
                     {/* Updated Color Codes to be clean and minimal */}
                     <th colSpan={4} className="border-b border-r border-gray-200 px-2 py-2 bg-gray-50 text-gray-800">{tOt('workToReach8Hours')}</th>
-                    <th colSpan={2} rowSpan={2} className="border-b border-r border-gray-200 px-2 py-2 align-middle bg-gray-100 text-gray-900">Total</th>
+                    <th colSpan={2} rowSpan={2} className="border-b border-r border-gray-200 px-2 py-2 align-middle bg-gray-100 text-gray-900">{tOt('total')}</th>
                     <th colSpan={4} className="border-b border-r border-gray-200 px-2 py-2 bg-gray-50 text-gray-800">{tOt('otWorksAfter8Hours')}</th>
                     <th colSpan={4} className="border-b border-r border-gray-200 px-2 py-2 bg-[#991525]/5 text-[#991525]">{tOt('totalHours')}</th>
-                    <th rowSpan={3} className="sticky right-0 z-20 bg-white border-b-2 border-l border-gray-200 px-4 py-3 align-middle shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</th>
+                    <th rowSpan={3} className="sticky right-0 z-20 bg-white border-b-2 border-l border-gray-200 px-4 py-3 align-middle shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">{tOt('actions')}</th>
                   </tr>
                   {/* Row 2 Headers */}
                   <tr>
@@ -232,11 +238,11 @@ export default async function DashboardPage({
                     <th colSpan={2} className="border-b border-r border-gray-200 px-2 py-1.5 bg-gray-50/50">{tOt('startTime')}</th>
                     <th colSpan={2} className="border-b border-r border-gray-200 px-2 py-1.5 bg-gray-50/50">{tOt('endTime')}</th>
                     
-                    <th colSpan={2} className="border-b border-r border-gray-200 px-2 py-1.5 bg-[#991525]/5">Working Days</th>
-                    <th colSpan={2} className="border-b border-gray-200 px-2 py-1.5 bg-[#991525]/5">Holidays</th>
+                    <th colSpan={2} className="border-b border-r border-gray-200 px-2 py-1.5 bg-[#991525]/5">{tOt('workingDays')}</th>
+                    <th colSpan={2} className="border-b border-gray-200 px-2 py-1.5 bg-[#991525]/5">{tOt('holidays')}</th>
                   </tr>
                   {/* Row 3 Headers */}
-                  <tr className="text-[10px] text-gray-400 bg-white">
+                  <tr className="text-xs text-gray-400 bg-white">
                     <th className="border-b-2 border-r border-gray-200 px-1 py-1.5">{tOt('h')}</th>
                     <th className="border-b-2 border-r border-gray-200 px-1 py-1.5">{tOt('m')}</th>
                     <th className="border-b-2 border-r border-gray-200 px-1 py-1.5">{tOt('h')}</th>
@@ -257,7 +263,7 @@ export default async function DashboardPage({
                   </tr>
                 </thead>
                 
-                <tbody className="bg-white divide-y divide-gray-100 text-center text-[13px]">
+                <tbody className="bg-white divide-y divide-gray-100 text-center">
                   {activePeriod.slips.map((slip) => {
                     const slipDate = new Date(slip.date);
                     const days = ["sun", "mon", "tue", "wed", "thur", "fri", "satu"] as const;
@@ -300,7 +306,7 @@ export default async function DashboardPage({
                               className="text-gray-400 hover:text-blue-600 transition-colors p-1"
                               title="Edit"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </Link>
                             <form action={deleteSlip}>
                               <input type="hidden" name="slipId" value={slip.id} />
@@ -319,7 +325,7 @@ export default async function DashboardPage({
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-200 mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{tOt('noSlips')}</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">{tOt('noSlips')}</h3>
             </div>
           )}
         </div>
@@ -333,10 +339,10 @@ export default async function DashboardPage({
                 <p className="text-gray-500 mt-1">Ready for print: <span className="font-bold text-[#991525]">{activePeriod.label}</span></p>
               </div>
               <button 
-                className="w-full sm:w-auto bg-[#991525] hover:bg-[#7a111e] text-white px-6 py-3 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-[#991525] hover:bg-[#7a111e] text-white px-6 py-3 rounded-xl font-bold text-base transition-colors shadow-sm flex items-center justify-center gap-2"
                 onClick={() => window.print()}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                 Print Official Sheet
               </button>
             </div>
@@ -353,7 +359,7 @@ export default async function DashboardPage({
           <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full relative overflow-hidden border border-gray-100">
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-extrabold text-gray-900 text-lg">{tOt('addTitle')}</h3>
+                <h3 className="font-extrabold text-gray-900 text-xl">{tOt('addTitle')}</h3>
                 <Link href={`/${locale}/dashboard?period=${activePeriodId}`} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </Link>
@@ -370,34 +376,34 @@ export default async function DashboardPage({
           <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full relative overflow-hidden border border-gray-100">
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-extrabold text-gray-900 text-lg">Edit Record</h3>
+                <h3 className="font-extrabold text-gray-900 text-xl">Edit Record</h3>
                 <Link href={`/${locale}/dashboard?period=${activePeriodId}`} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </Link>
               </div>
-              <form action={updateSlip} className="p-6 space-y-4">
+              <form action={updateSlip} className="p-6 space-y-4 text-base">
                 <input type="hidden" name="slipId" value={slipToEdit.id} />
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Date</label>
-                  <input type="date" name="date" defaultValue={slipToEdit.date} required className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-[#991525] focus:border-[#991525] outline-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                  <input type="date" name="date" defaultValue={slipToEdit.date} required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-[#991525] focus:border-[#991525] outline-none" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Start Time</label>
-                    <input type="time" name="start_time" defaultValue={slipToEdit.start_time} required className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-[#991525] focus:border-[#991525] outline-none" />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Start Time</label>
+                    <input type="time" name="start_time" defaultValue={slipToEdit.start_time} required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-[#991525] focus:border-[#991525] outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">End Time</label>
-                    <input type="time" name="end_time" defaultValue={slipToEdit.end_time} required className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-[#991525] focus:border-[#991525] outline-none" />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">End Time</label>
+                    <input type="time" name="end_time" defaultValue={slipToEdit.end_time} required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-[#991525] focus:border-[#991525] outline-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Reason</label>
-                  <input type="text" name="reason" defaultValue={slipToEdit.reason} required className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-[#991525] focus:border-[#991525] outline-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Reason</label>
+                  <input type="text" name="reason" defaultValue={slipToEdit.reason} required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-[#991525] focus:border-[#991525] outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Total Hours (Override)</label>
-                  <input type="number" step="0.01" name="total_hours" defaultValue={slipToEdit.total_hours} required className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-[#991525] focus:border-[#991525] outline-none" />
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Total Hours (Override)</label>
+                  <input type="number" step="0.01" name="total_hours" defaultValue={slipToEdit.total_hours} required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-[#991525] focus:border-[#991525] outline-none" />
                 </div>
                 <button type="submit" className="w-full bg-[#991525] text-white font-bold rounded-lg p-3 mt-4 hover:bg-[#7a111e] transition-colors">Save Changes</button>
               </form>
