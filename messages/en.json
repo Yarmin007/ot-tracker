@@ -1,7 +1,26 @@
 {
   "Auth": {
     "title": "Welcome Back",
-    "login": "Sign in with Google"
+    "login": "Sign in with Google",
+    "subtitle": "Welcome back. Please sign in to your account.",
+    "email": "Email Address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "orContinueWith": "Or continue with",
+    "connectingGoogle": "Connecting to Google...",
+    "enterEmailFirst": "Enter your email address above, then click 'Forgot password?'",
+    "resetSent": "Password reset link sent! Please check your inbox.",
+    "authError": "We couldn't sign you in. Please try again.",
+    "newPasswordTitle": "Set a New Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "updatePassword": "Update Password",
+    "passwordsMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "passwordUpdated": "Password updated. Redirecting...",
+    "backToLogin": "Back to sign in"
   },
   "Onboarding": {
     "title": "Setup Your Profile",
@@ -11,7 +30,9 @@
     "cardNo": "Record Card No:",
     "salary": "Basic Salary",
     "save": "Complete Setup",
-    "uploadPhoto": "Upload Profile Picture"
+    "uploadPhoto": "Upload Profile Picture",
+    "processing": "Processing...",
+    "salaryInvalid": "Please enter a valid salary."
   },
   "Dashboard": {
     "title": "Overview",
@@ -19,18 +40,71 @@
     "designation": "Designation",
     "cardNo": "Record Card No",
     "salary": "Basic Salary",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "schoolName": "Hamad School"
   },
   "Overtime": {
     "addTitle": "Add Overtime",
     "historyTitle": "My Overtime Slips",
     "date": "Date",
+    "day": "Day",
     "startTime": "Start Time",
     "endTime": "End Time",
     "totalHours": "Total Hours",
     "reason": "Reason for Overtime",
     "submit": "Submit Request",
     "status": "Status",
-    "noSlips": "No overtime slips found."
+    "noSlips": "No overtime slips found.",
+    "addFirst": "Use \"Add Overtime\" above to record your first slip.",
+    "workToReach8Hours": "Work to complete the official 8 hours",
+    "otWorksAfter8Hours": "Overtime work after the official 8 hours",
+    "h": "H",
+    "m": "M",
+    "workingDays": "Working Days",
+    "holidays": "Holidays",
+    "actions": "Actions",
+    "claimedHours": "Claimed Hours",
+    "total": "Total",
+    "currentCycleOverview": "Current Cycle Overview",
+    "sheetPreview": "Sheet Preview",
+    "selectPeriod": "Select pay period",
+    "noPeriod": "No period selected",
+    "export": "Export",
+    "previewTitle": "Generated OT Sheet Preview",
+    "readyForPrint": "Ready for print:",
+    "print": "Print Sheet",
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this record?",
+    "editTitle": "Edit Record",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "totalHoursOverride": "Total Hours (leave blank to auto-calculate)",
+    "calculatedHours": "Calculated hours",
+    "invalidTimes": "Start and end time cannot be the same.",
+    "days": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thur": "Thursday",
+      "fri": "Friday",
+      "satu": "Saturday"
+    },
+    "months": {
+      "Jan": "Jan",
+      "Feb": "Feb",
+      "Mar": "Mar",
+      "Apr": "Apr",
+      "May": "May",
+      "Jun": "Jun",
+      "Jul": "Jul",
+      "Aug": "Aug",
+      "Sep": "Sep",
+      "Oct": "Oct",
+      "Nov": "Nov",
+      "Dec": "Dec"
+    }
   }
 }

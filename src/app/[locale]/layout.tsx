@@ -5,13 +5,18 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import "./globals.css";
 
-// 1. Initialize the English font
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
-// 2. Initialize the custom Dhivehi font
 const mvWaheed = localFont({
   src: "../fonts/MVWaheed.otf",
   display: "swap",
+  variable: "--font-mvwaheed",
+});
+
+const faruma = localFont({
+  src: "../fonts/Faruma.ttf",
+  display: "swap",
+  variable: "--font-faruma-src",
 });
 
 export const metadata: Metadata = {
@@ -26,22 +31,22 @@ export default async function RootLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  // Await the params Promise here
   const { locale } = await params;
-  
-  // Fetch the translation messages for the current locale
   const messages = await getMessages();
 
-  // 3. Check the locale to apply the correct font and text direction
   const isDhivehi = locale === 'dv';
   const fontClass = isDhivehi ? mvWaheed.className : inter.className;
   const direction = isDhivehi ? 'rtl' : 'ltr';
 
   return (
-    // Add the 'dir' attribute to handle RTL (Right-to-Left) formatting for Dhivehi
-    <html lang={locale} dir={direction}>
-      {/* Apply the conditional font class here */}
-      <body className={fontClass}>
+    // suppressHydrationWarning: browser extensions often inject attributes on <html>
+    <html
+      lang={locale}
+      dir={direction}
+      className={`${inter.variable} ${mvWaheed.variable} ${faruma.variable}`}
+      suppressHydrationWarning
+    >
+      <body className={`${fontClass} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

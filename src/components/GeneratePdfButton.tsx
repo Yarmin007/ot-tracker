@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from 'react';
+import { DHIVEHI_DAYS, parseDateOnly } from '@/lib/ot';
 
-export function GeneratePdfButton({ profile, slips }: { profile: any, slips: any[] }) {
+type Profile = { full_name?: string | null; designation?: string | null; record_card_no?: string | null; basic_salary?: number | string | null } | null;
+type Slip = { date: string; reason: string; start_time: string; end_time: string; total_hours: number | string };
+
+export function GeneratePdfButton({ profile, slips }: { profile: Profile, slips: Slip[] }) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
       // Dynamically import html2pdf to prevent server-side errors
-      // @ts-ignore
       const html2pdf = (await import('html2pdf.js')).default;
       
       const element = document.getElementById('pdf-content');
@@ -22,7 +25,7 @@ export function GeneratePdfButton({ profile, slips }: { profile: any, slips: any
       
       const opt = {
         margin:       0.5,
-        filename:     `OT_Sheet_${profile.full_name}.pdf`,
+        filename:     `OT_Sheet_${profile?.full_name ?? 'export'}.pdf`,
         // Fix: Use 'as const' to tell TypeScript these are exact literal values
         image:        { type: 'jpeg' as const, quality: 1 },
         html2canvas:  { scale: 2, useCORS: true, windowWidth: 1200 },
@@ -37,8 +40,6 @@ export function GeneratePdfButton({ profile, slips }: { profile: any, slips: any
     setIsGenerating(false);
   };
 
-  // Array of Dhivehi days
-  const dhivehiDays = ["އާދީއްތަ", "ހޯމަ", "އަންގާރަ", "ބުދަ", "ބުރާސްފަތި", "ހުކުރު", "ހޮނިހިރު"];
 
   return (
     <>
@@ -91,8 +92,7 @@ export function GeneratePdfButton({ profile, slips }: { profile: any, slips: any
             </thead>
             <tbody>
               {slips?.map((slip, index) => {
-                const slipDate = new Date(slip.date);
-                const dayOfWeek = dhivehiDays[slipDate.getDay()];
+                const dayOfWeek = DHIVEHI_DAYS[parseDateOnly(slip.date).weekday];
                 return (
                   <tr key={index}>
                     <td className="border border-[#000000] p-3">{slip.date}</td>

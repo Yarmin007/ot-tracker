@@ -1,80 +1,100 @@
-"use client";
+import React from 'react';
+import { DHIVEHI_DAYS, parseDateOnly, splitHours } from '@/lib/ot';
 
-export function SvgOtSheet({ profile, slips }: { profile: any, slips: any[] }) {
-  const A4_WIDTH = 1123;
-  const A4_HEIGHT = 794;
-  
-  // IMPORTANT: Set this to the exact number of empty rows your SVG template has!
-  const ROWS_PER_PAGE = 10; 
+interface SlipEntry {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_hours: number | string;
+  reason: string;
+}
 
-  // Function to split the slips array into chunks (pages)
-  const getPages = (data: any[]) => {
-    // If there are no slips, we still want to show at least one blank page
-    if (!data || data.length === 0) return [[]];
-    
-    const pages = [];
-    for (let i = 0; i < data.length; i += ROWS_PER_PAGE) {
-      pages.push(data.slice(i, i + ROWS_PER_PAGE));
-    }
-    return pages;
-  };
+interface ProfileData {
+  full_name?: string | null;
+  designation?: string | null;
+  record_card_no?: string | null;
+  basic_salary?: number | string | null;
+}
 
-  const pages = getPages(slips);
+interface SvgOtSheetProps {
+  profile: ProfileData | null;
+  slips: SlipEntry[];
+}
+
+/** Number of data rows printed on the template. */
+const ROWS_PER_PAGE = 15;
+const TEXT = { fill: '#231f20', stroke: 'none' } as const;
+
+const timePart = (timeStr: string | undefined, part: 0 | 1) => (timeStr ? timeStr.split(':')[part] ?? '' : '');
+
+export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips }) => {
+  // The official sheet is chronological; split it into template-sized pages.
+  const sorted = [...slips].sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+  const pages: SlipEntry[][] = [];
+  for (let i = 0; i < sorted.length; i += ROWS_PER_PAGE) pages.push(sorted.slice(i, i + ROWS_PER_PAGE));
+  if (pages.length === 0) pages.push([]);
+
+  const salary = Number(profile?.basic_salary);
 
   return (
-    <div className="w-full bg-gray-200 p-8 flex flex-col items-center space-y-8">
-      {/* Loop through the pages we generated */}
-      {pages.map((pageSlips, pageIndex) => {
-        // Page 1 uses 01.svg. Every page after that uses 02.svg.
-        const isFirstPage = pageIndex === 0;
-        const bgImage = isFirstPage ? "/Dhivehi_Templatev2-01.svg" : "/Dhivehi_Templatev2-02.svg";
+    <div className="flex flex-col gap-8 print:gap-0">
+      {pages.map((pageSlips, pageIdx) => (
+        <div
+          key={pageIdx}
+          className="sheet-page relative w-full max-w-full overflow-hidden select-none"
+          style={{ aspectRatio: '841.8898 / 595.2756' }}
+        >
+          {/* Base static template graphic */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/sheet-template.svg"
+            alt=""
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          />
 
-        // IMPORTANT: Template 2 might have the table starting higher up since it doesn't have the big school header.
-        // You can adjust these starting Y coordinates independently!
-        const startY = isFirstPage ? 300 : 200; 
-        const rowHeight = 35;
+          {/* Overlaid text values */}
+          <svg viewBox="0 0 841.8898 595.2756" className="absolute inset-0 w-full h-full font-dhivehi select-none" aria-hidden="true">
+            <g id="Dynamic_Text_Layer">
+              <text transform="translate(666.4126 158.8978)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.full_name || '-'}</text>
+              <text transform="translate(439.3867 158.8979)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.designation || '-'}</text>
+              <text transform="translate(185.5633 158.8979)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.record_card_no || '-'}</text>
+              <text transform="translate(92.8949 158.8978)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{Number.isFinite(salary) && salary > 0 ? salary.toLocaleString('en-US') : '-'}</text>
 
-        return (
-          <svg 
-            key={pageIndex}
-            width={A4_WIDTH} 
-            height={A4_HEIGHT} 
-            viewBox={`0 0 ${A4_WIDTH} ${A4_HEIGHT}`} 
-            className="bg-white shadow-xl flex-shrink-0"
-          >
-            {/* 1. The Background Template */}
-            <image href={bgImage} width={A4_WIDTH} height={A4_HEIGHT} />
+              {pageSlips.map((slip, idx) => {
+                const y = 207.5 + idx * 24.575;
+                const total = splitHours(slip.total_hours);
 
-            {/* 2. Employee Profile Details */}
-            {/* Usually, you want the employee name on every single page so the printed papers don't get mixed up */}
-            <text x="950" y={isFirstPage ? "150" : "100"} fontFamily="'MV Waheed'" fontSize="16" direction="rtl" textAnchor="end">
-              {profile?.full_name}
-            </text>
+                return (
+                  <g key={slip.id || idx}>
+                    <text transform={`translate(774.1357 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{slip.date}</text>
+                    <text transform={`translate(742.1693 ${y})`} {...TEXT} fontSize="11" textAnchor="middle">{DHIVEHI_DAYS[parseDateOnly(slip.date).weekday]}</text>
+                    <text transform={`translate(550.0000 ${y})`} {...TEXT} fontSize="11" textAnchor="start">
+                      {(slip.reason ?? '').length > 40 ? `${slip.reason.slice(0, 40)}…` : slip.reason ?? ''}
+                    </text>
 
-            {/* 3. The Overtime Rows for THIS specific page */}
-            {pageSlips.map((slip, rowIndex) => {
-              const rowY = startY + (rowIndex * rowHeight);
+                    {/* Base-time placeholders */}
+                    <text transform={`translate(436.9121 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
+                    <text transform={`translate(457.5868 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
+                    <text transform={`translate(514.4125 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
+                    <text transform={`translate(537.8772 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
 
-              return (
-                <g key={slip.id || rowIndex}>
-                  {/* Date */}
-                  <text x="1050" y={rowY} fontFamily="'MV Waheed'" fontSize="14" direction="rtl" textAnchor="end">
-                    {slip.date}
-                  </text>
-                  {/* Reason */}
-                  <text x="850" y={rowY} fontFamily="'MV Waheed'" fontSize="14" direction="rtl" textAnchor="end">
-                    {slip.reason}
-                  </text>
-                  {/* Total Hours */}
-                  <text x="400" y={rowY} fontFamily="Arial" fontSize="14" direction="ltr" textAnchor="middle" fontWeight="bold">
-                    {slip.total_hours}
-                  </text>
-                </g>
-              );
-            })}
+                    {/* Overtime start / end */}
+                    <text transform={`translate(359.0438 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.start_time, 0)}</text>
+                    <text transform={`translate(379.717 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.start_time, 1)}</text>
+                    <text transform={`translate(317.2792 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.end_time, 0)}</text>
+                    <text transform={`translate(337.6292 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.end_time, 1)}</text>
+
+                    {/* Total hours / minutes */}
+                    <text transform={`translate(238.3541 ${y})`} {...TEXT} fontSize="11" fontWeight="bold" textAnchor="middle">{total.h}</text>
+                    <text transform={`translate(259.0278 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{total.m}</text>
+                  </g>
+                );
+              })}
+            </g>
           </svg>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
-}
+};

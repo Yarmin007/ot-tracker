@@ -1,94 +1,106 @@
 "use client";
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { calculateHours, getPeriodId } from '@/lib/ot';
+
+const inputClass =
+  "mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525]";
+
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export function AddOvertimeForm({ userId }: { userId: string }) {
   const t = useTranslations('Overtime');
-  const supabase = createClient();
+  const locale = useLocale();
+  const [supabase] = useState(() => createClient());
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
 
-  // Auto-calculate hours
-  const calculateHours = (start: string, end: string) => {
-    if (!start || !end) return "0.00";
-    const startDate = new Date(`1970-01-01T${start}`);
-    const endDate = new Date(`1970-01-01T${end}`);
-    let diff = (endDate.getTime() - startDate.getTime()) / 1000 / 60 / 60;
-    // Handle overnight shifts
-    if (diff < 0) diff += 24;
-    return diff.toFixed(2);
-  };
+  const hours = calculateHours(start, end);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Capture the form reference BEFORE the async await happens
-    const form = e.currentTarget;
-    
-    setLoading(true);
-    
-    const formData = new FormData(form);
-    const date = formData.get('date') as string;
-    const start = formData.get('startTime') as string;
-    const end = formData.get('endTime') as string;
-    const reason = formData.get('reason') as string;
-    const hours = calculateHours(start, end);
+    setError(null);
 
+    const formData = new FormData(e.currentTarget);
+    const date = formData.get('date') as string;
+    const reason = (formData.get('reason') as string).trim();
+
+    if (start === end) {
+      setError(t('invalidTimes'));
+      return;
+    }
+
+    setLoading(true);
     const { error } = await supabase.from('overtime_slips').insert({
       user_id: userId,
-      date: date,
+      date,
       start_time: start,
       end_time: end,
-      total_hours: parseFloat(hours),
-      reason: reason,
-      status: 'Pending'
+      total_hours: hours,
+      reason,
+      status: 'Pending',
     });
 
-    if (!error) {
-      form.reset(); // Use the captured reference here
-      router.refresh(); // This tells Next.js to re-fetch the server component so the new slip appears!
-    } else {
-      alert("Error submitting slip: " + error.message);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // Close the modal and jump to the pay period the new slip belongs to.
+    router.replace(`/${locale}/dashboard?period=${getPeriodId(date)}`, { scroll: false });
+    router.refresh();
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">{t('addTitle')}</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">{t('date')}</label>
-          <input type="date" name="date" required className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-[#991525] focus:border-[#991525]" />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">{t('startTime')}</label>
-            <input type="time" name="startTime" id="startTime" required className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-[#991525] focus:border-[#991525]" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">{t('endTime')}</label>
-            <input type="time" name="endTime" id="endTime" required className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-[#991525] focus:border-[#991525]" />
-          </div>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div role="alert" className="p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 font-medium">{error}</div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">{t('reason')}</label>
-          <textarea name="reason" required rows={3} className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-[#991525] focus:border-[#991525] resize-none"></textarea>
-        </div>
+      <div>
+        <label htmlFor="ot-date" className="block text-sm font-medium text-gray-700">{t('date')}</label>
+        <input id="ot-date" type="date" name="date" defaultValue={todayLocal()} suppressHydrationWarning required className={inputClass} />
+      </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[#991525] text-white py-2 px-4 rounded-md hover:bg-[#7a111e] transition-colors disabled:opacity-50 font-bold shadow-sm"
-        >
-          {loading ? '...' : t('submit')}
-        </button>
-      </form>
-    </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="ot-start" className="block text-sm font-medium text-gray-700">{t('startTime')}</label>
+          <input id="ot-start" type="time" name="startTime" value={start} onChange={(e) => setStart(e.target.value)} required className={inputClass} />
+        </div>
+        <div>
+          <label htmlFor="ot-end" className="block text-sm font-medium text-gray-700">{t('endTime')}</label>
+          <input id="ot-end" type="time" name="endTime" value={end} onChange={(e) => setEnd(e.target.value)} required className={inputClass} />
+        </div>
+      </div>
+
+      {start && end && start !== end && (
+        <p className="text-sm text-gray-600">
+          {t('calculatedHours')}: <span className="font-bold text-[#991525]" dir="ltr">{hours} {t('h')}</span>
+        </p>
+      )}
+
+      <div>
+        <label htmlFor="ot-reason" className="block text-sm font-medium text-gray-700">{t('reason')}</label>
+        <textarea id="ot-reason" name="reason" required rows={3} className={`${inputClass} resize-none`}></textarea>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-[#991525] text-white py-2.5 px-4 rounded-md hover:bg-[#7a111e] transition-colors disabled:opacity-50 font-bold shadow-sm cursor-pointer"
+      >
+        {loading ? t('saving') : t('submit')}
+      </button>
+    </form>
   );
 }

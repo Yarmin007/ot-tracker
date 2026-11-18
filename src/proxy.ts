@@ -1,34 +1,74 @@
 import createMiddleware from 'next-intl/middleware';
 import { type NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+
+const locales = ['en', 'dv'] as const;
 
 const handleI18nRouting = createMiddleware({
-  locales: ['en', 'dv'],
+  locales,
   defaultLocale: 'en',
   localePrefix: 'always'
 });
 
 export async function proxy(request: NextRequest) {
-  const i18nResponse = handleI18nRouting(request);
-  const supabase = await createClient();
+  const response = handleI18nRouting(request);
+
+  // Refresh the Supabase session and write updated auth cookies onto the response.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
+      },
+    }
+  );
+
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If user is logged in, check onboarding status
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_onboarded')
-      .eq('id', user.id)
-      .single();
+  const { pathname } = request.nextUrl;
+  const firstSegment = pathname.split('/')[1];
+  // Let next-intl handle locale-less URLs (e.g. "/") first.
+  if (!(locales as readonly string[]).includes(firstSegment)) return response;
+  const locale = firstSegment;
+  const rest = pathname.slice(locale.length + 1) || '/';
 
-    // If not onboarded and not already on the onboarding page, redirect
-    if (profile && !profile.is_onboarded && !request.nextUrl.pathname.includes('/onboarding')) {
-      const locale = request.nextUrl.pathname.split('/')[1] || 'en';
-      return NextResponse.redirect(new URL(`/${locale}/onboarding`, request.url));
-    }
+  const redirectTo = (path: string) => {
+    const redirect = NextResponse.redirect(new URL(`/${locale}${path}`, request.url));
+    // Keep any refreshed auth cookies.
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
+  };
+
+  const isPublic = rest.startsWith('/login');
+
+  if (!user) {
+    if (!isPublic && !rest.startsWith('/reset-password')) return redirectTo('/login');
+    return response;
   }
 
-  return i18nResponse;
+  // Signed-in users don't need the login page.
+  if (isPublic) return redirectTo('/dashboard');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_onboarded')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const onboarded = !!profile?.is_onboarded;
+  const onOnboarding = rest.startsWith('/onboarding');
+
+  if (!onboarded && !onOnboarding && !rest.startsWith('/reset-password')) return redirectTo('/onboarding');
+  if (onboarded && onOnboarding) return redirectTo('/dashboard');
+
+  return response;
 }
 
 export const config = {
