@@ -1,0 +1,117 @@
+// Positions on the official OT sheet template (public/sheet-template.svg),
+// in PDF points measured from the TOP-LEFT of an A4 landscape page.
+// Measured from the template's own table rectangles. Shared by the on-screen
+// preview (SvgOtSheet) and the PDF export so the two can't drift apart.
+//
+// Within every hours/minutes pair on this form, MINUTES is the right-hand
+// column and HOURS the left-hand one.
+
+import { DHIVEHI_DAYS, getPeriodRange, parseDateOnly, shortTime, splitHours } from '@/lib/ot';
+
+export const SHEET_WIDTH = 841.89;
+export const SHEET_HEIGHT = 595.28;
+export const ROWS_PER_PAGE = 15;
+
+const TABLE_TOP = 190.9;
+const ROW_HEIGHT = 24.573;
+/** Text baseline inside a row, measured from the row's top edge. */
+const ROW_BASELINE = 16.3;
+
+export const rowBaseline = (row: number) => TABLE_TOP + row * ROW_HEIGHT + ROW_BASELINE;
+
+export const LAYOUT = {
+  /** Profile line above the table; values are right-aligned just left of each label. */
+  profile: {
+    y: 133,
+    // Label extents on the template (pt): name 753-806, designation 532-550,
+    // record card 296-340, salary 151-173, currency "ރ" 76-81.
+    name: { right: 747, maxWidth: 185 },
+    designation: { right: 526, maxWidth: 175 },
+    cardNo: { right: 290, maxWidth: 105 },
+    salary: { right: 145, maxWidth: 58 },
+  },
+  /** "16 ____ to 15 ____" period line. */
+  period: {
+    y: 116.5,
+    // Template text (pt): "16" 514-522, "މިން" 428-439, "15" 404-412, "އަށް" 316-325.
+    startMonth: { center: 476, maxWidth: 64 },
+    endMonth: { center: 364.5, maxWidth: 68 },
+  },
+  columns: {
+    date: { center: 783.4, maxWidth: 46 },
+    day: { center: 739.1, maxWidth: 38 },
+    reason: { right: 714, maxWidth: 154 },
+    otStartMinutes: 345.2,
+    otStartHours: 324.4,
+    otEndMinutes: 266.5,
+    otEndHours: 245.6,
+    totalWorkingMinutes: 188.2,
+    totalWorkingHours: 166.9,
+  },
+} as const;
+
+export const DHIVEHI_MONTHS = [
+  'ޖެނުއަރީ', 'ފެބްރުއަރީ', 'މާރޗް', 'އޭޕްރީލް', 'މެއި', 'ޖޫން',
+  'ޖުލައި', 'އޮގަސްޓް', 'ސެޕްޓެމްބަރ', 'އޮކްޓޫބަރ', 'ނޮވެމްބަރ', 'ޑިސެމްބަރ',
+];
+
+export type SheetSlip = {
+  id?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_hours: number | string;
+  reason: string | null;
+};
+
+export type SheetProfile = {
+  full_name?: string | null;
+  designation?: string | null;
+  record_card_no?: string | null;
+  basic_salary?: number | string | null;
+} | null;
+
+/** Text for each cell of one table row. */
+export function rowCells(slip: SheetSlip) {
+  const [startH = '', startM = ''] = shortTime(slip.start_time).split(':');
+  const [endH = '', endM = ''] = shortTime(slip.end_time).split(':');
+  const total = splitHours(slip.total_hours);
+  return {
+    date: slip.date,
+    day: DHIVEHI_DAYS[parseDateOnly(slip.date).weekday] ?? '',
+    reason: slip.reason ?? '',
+    otStartHours: startH,
+    otStartMinutes: startM,
+    otEndHours: endH,
+    otEndMinutes: endM,
+    totalWorkingHours: String(total.h),
+    totalWorkingMinutes: String(total.m).padStart(2, '0'),
+  };
+}
+
+export function profileValues(profile: SheetProfile) {
+  const salary = Number(profile?.basic_salary);
+  return {
+    name: profile?.full_name ?? '',
+    designation: profile?.designation ?? '',
+    cardNo: profile?.record_card_no ?? '',
+    salary: Number.isFinite(salary) && salary > 0 ? salary.toLocaleString('en-US') : '',
+  };
+}
+
+/** Month names (with year) for the "16 ___ to 15 ___" line. */
+export function periodMonths(periodId: string) {
+  const { year, month, prevYear, prevMonth } = getPeriodRange(periodId);
+  return {
+    start: `${DHIVEHI_MONTHS[prevMonth]} ${prevYear}`,
+    end: `${DHIVEHI_MONTHS[month]} ${year}`,
+  };
+}
+
+/** Chronological, split into template-sized pages (at least one page). */
+export function paginate<T extends SheetSlip>(slips: T[]): T[][] {
+  const sorted = [...slips].sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+  const pages: T[][] = [];
+  for (let i = 0; i < sorted.length; i += ROWS_PER_PAGE) pages.push(sorted.slice(i, i + ROWS_PER_PAGE));
+  return pages.length ? pages : [[]];
+}

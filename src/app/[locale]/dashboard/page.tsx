@@ -372,7 +372,7 @@ export default async function DashboardPage({
             </div>
             <div className="p-6 overflow-auto bg-slate-100/60 flex-1 print:p-0 print:overflow-visible print:bg-white">
               <div id="print-area" className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm w-full min-w-[1123px] print:p-0 print:border-0 print:shadow-none print:rounded-none print:min-w-0" dir="ltr">
-                <SvgOtSheet profile={profile} slips={activePeriod.slips} />
+                <SvgOtSheet profile={profile} slips={activePeriod.slips} periodId={activePeriodId} />
               </div>
             </div>
           </ModalShell>

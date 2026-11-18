@@ -1,51 +1,70 @@
 import React from 'react';
-import { DHIVEHI_DAYS, parseDateOnly, splitHours } from '@/lib/ot';
-
-interface SlipEntry {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  total_hours: number | string;
-  reason: string;
-}
-
-interface ProfileData {
-  full_name?: string | null;
-  designation?: string | null;
-  record_card_no?: string | null;
-  basic_salary?: number | string | null;
-}
+import {
+  LAYOUT,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
+  paginate,
+  periodMonths,
+  profileValues,
+  rowBaseline,
+  rowCells,
+  type SheetProfile,
+  type SheetSlip,
+} from '@/lib/sheetLayout';
 
 interface SvgOtSheetProps {
-  profile: ProfileData | null;
-  slips: SlipEntry[];
+  profile: SheetProfile;
+  slips: SheetSlip[];
+  periodId?: string | null;
 }
 
-/** Number of data rows printed on the template. */
-const ROWS_PER_PAGE = 15;
-const TEXT = { fill: '#231f20', stroke: 'none' } as const;
+const INK = '#231f20';
 
-const timePart = (timeStr: string | undefined, part: 0 | 1) => (timeStr ? timeStr.split(':')[part] ?? '' : '');
+/** Right-aligned right-to-left text: with direction="rtl", text-anchor "start" is the right edge. */
+function RtlText({ x, y, size, children }: { x: number; y: number; size: number; children: string }) {
+  if (!children) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      fill={INK}
+      fontSize={size}
+      direction="rtl"
+      textAnchor="start"
+    >
+      {children}
+    </text>
+  );
+}
 
-export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips }) => {
-  // The official sheet is chronological; split it into template-sized pages.
-  const sorted = [...slips].sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? '').localeCompare(b.start_time ?? ''));
-  const pages: SlipEntry[][] = [];
-  for (let i = 0; i < sorted.length; i += ROWS_PER_PAGE) pages.push(sorted.slice(i, i + ROWS_PER_PAGE));
-  if (pages.length === 0) pages.push([]);
+function CenterText({ x, y, size, children }: { x: number; y: number; size: number; children: string }) {
+  if (!children) return null;
+  return (
+    <text x={x} y={y} fill={INK} fontSize={size} textAnchor="middle">
+      {children}
+    </text>
+  );
+}
 
-  const salary = Number(profile?.basic_salary);
+const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}...` : text);
+
+/**
+ * On-screen / printable preview of the official OT sheet.
+ * Uses the same layout as the PDF export (src/lib/sheetLayout.ts).
+ */
+export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips, periodId }) => {
+  const p = profileValues(profile);
+  const months = periodId ? periodMonths(periodId) : null;
+  const { profile: pl, period, columns: c } = LAYOUT;
 
   return (
     <div className="flex flex-col gap-8 print:gap-0">
-      {pages.map((pageSlips, pageIdx) => (
+      {paginate(slips).map((pageSlips, pageIdx) => (
         <div
           key={pageIdx}
           className="sheet-page relative w-full max-w-full overflow-hidden select-none"
-          style={{ aspectRatio: '841.8898 / 595.2756' }}
+          style={{ aspectRatio: `${SHEET_WIDTH} / ${SHEET_HEIGHT}` }}
         >
-          {/* Base static template graphic */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/sheet-template.svg"
@@ -53,45 +72,36 @@ export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips }) => {
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
           />
 
-          {/* Overlaid text values */}
-          <svg viewBox="0 0 841.8898 595.2756" className="absolute inset-0 w-full h-full font-dhivehi select-none" aria-hidden="true">
-            <g id="Dynamic_Text_Layer">
-              <text transform="translate(666.4126 158.8978)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.full_name || '-'}</text>
-              <text transform="translate(439.3867 158.8979)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.designation || '-'}</text>
-              <text transform="translate(185.5633 158.8979)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{profile?.record_card_no || '-'}</text>
-              <text transform="translate(92.8949 158.8978)" {...TEXT} fontWeight="bold" fontSize="13" textAnchor="start">{Number.isFinite(salary) && salary > 0 ? salary.toLocaleString('en-US') : '-'}</text>
+          <svg viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`} className="absolute inset-0 w-full h-full font-dhivehi select-none" aria-hidden="true">
+            <RtlText x={pl.name.right} y={pl.y} size={11}>{truncate(p.name, 40)}</RtlText>
+            <RtlText x={pl.designation.right} y={pl.y} size={11}>{truncate(p.designation, 38)}</RtlText>
+            <RtlText x={pl.cardNo.right} y={pl.y} size={11}>{p.cardNo}</RtlText>
+            <RtlText x={pl.salary.right} y={pl.y} size={11}>{p.salary}</RtlText>
 
-              {pageSlips.map((slip, idx) => {
-                const y = 207.5 + idx * 24.575;
-                const total = splitHours(slip.total_hours);
+            {months && (
+              <>
+                <CenterText x={period.startMonth.center} y={period.y} size={10}>{months.start}</CenterText>
+                <CenterText x={period.endMonth.center} y={period.y} size={10}>{months.end}</CenterText>
+              </>
+            )}
 
-                return (
-                  <g key={slip.id || idx}>
-                    <text transform={`translate(774.1357 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{slip.date}</text>
-                    <text transform={`translate(742.1693 ${y})`} {...TEXT} fontSize="11" textAnchor="middle">{DHIVEHI_DAYS[parseDateOnly(slip.date).weekday]}</text>
-                    <text transform={`translate(550.0000 ${y})`} {...TEXT} fontSize="11" textAnchor="start">
-                      {(slip.reason ?? '').length > 40 ? `${slip.reason.slice(0, 40)}…` : slip.reason ?? ''}
-                    </text>
-
-                    {/* Base-time placeholders */}
-                    <text transform={`translate(436.9121 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
-                    <text transform={`translate(457.5868 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
-                    <text transform={`translate(514.4125 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
-                    <text transform={`translate(537.8772 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">-</text>
-
-                    {/* Overtime start / end */}
-                    <text transform={`translate(359.0438 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.start_time, 0)}</text>
-                    <text transform={`translate(379.717 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.start_time, 1)}</text>
-                    <text transform={`translate(317.2792 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.end_time, 0)}</text>
-                    <text transform={`translate(337.6292 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{timePart(slip.end_time, 1)}</text>
-
-                    {/* Total hours / minutes */}
-                    <text transform={`translate(238.3541 ${y})`} {...TEXT} fontSize="11" fontWeight="bold" textAnchor="middle">{total.h}</text>
-                    <text transform={`translate(259.0278 ${y})`} {...TEXT} fontSize="10" textAnchor="middle">{total.m}</text>
-                  </g>
-                );
-              })}
-            </g>
+            {pageSlips.map((slip, row) => {
+              const y = rowBaseline(row);
+              const cell = rowCells(slip);
+              return (
+                <g key={slip.id ?? row}>
+                  <CenterText x={c.date.center} y={y} size={9}>{cell.date}</CenterText>
+                  <CenterText x={c.day.center} y={y} size={10}>{cell.day}</CenterText>
+                  <RtlText x={c.reason.right} y={y} size={10}>{truncate(cell.reason, 42)}</RtlText>
+                  <CenterText x={c.otStartHours} y={y} size={10}>{cell.otStartHours}</CenterText>
+                  <CenterText x={c.otStartMinutes} y={y} size={10}>{cell.otStartMinutes}</CenterText>
+                  <CenterText x={c.otEndHours} y={y} size={10}>{cell.otEndHours}</CenterText>
+                  <CenterText x={c.otEndMinutes} y={y} size={10}>{cell.otEndMinutes}</CenterText>
+                  <CenterText x={c.totalWorkingHours} y={y} size={10}>{cell.totalWorkingHours}</CenterText>
+                  <CenterText x={c.totalWorkingMinutes} y={y} size={10}>{cell.totalWorkingMinutes}</CenterText>
+                </g>
+              );
+            })}
           </svg>
         </div>
       ))}
