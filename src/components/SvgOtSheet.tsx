@@ -72,16 +72,16 @@ export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips, periodId
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
           />
 
-          <svg viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`} className="absolute inset-0 w-full h-full font-dhivehi select-none" aria-hidden="true">
-            <RtlText x={pl.name.right} y={pl.y} size={11}>{truncate(p.name, 40)}</RtlText>
-            <RtlText x={pl.designation.right} y={pl.y} size={11}>{truncate(p.designation, 38)}</RtlText>
-            <RtlText x={pl.cardNo.right} y={pl.y} size={11}>{p.cardNo}</RtlText>
-            <RtlText x={pl.salary.right} y={pl.y} size={11}>{p.salary}</RtlText>
+          <svg viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`} className="absolute inset-0 w-full h-full font-sheet select-none" aria-hidden="true">
+            <RtlText x={pl.name.right} y={pl.y} size={10.5}>{truncate(p.name, 40)}</RtlText>
+            <RtlText x={pl.designation.right} y={pl.y} size={10.5}>{truncate(p.designation, 38)}</RtlText>
+            <RtlText x={pl.cardNo.right} y={pl.y} size={10.5}>{p.cardNo}</RtlText>
+            <RtlText x={pl.salary.right} y={pl.y} size={10.5}>{p.salary}</RtlText>
 
             {months && (
               <>
-                <CenterText x={period.startMonth.center} y={period.y} size={10}>{months.start}</CenterText>
-                <CenterText x={period.endMonth.center} y={period.y} size={10}>{months.end}</CenterText>
+                <CenterText x={period.startMonth.center} y={period.y} size={9.5}>{months.start}</CenterText>
+                <CenterText x={period.endMonth.center} y={period.y} size={9.5}>{months.end}</CenterText>
               </>
             )}
 
@@ -90,15 +90,15 @@ export const SvgOtSheet: React.FC<SvgOtSheetProps> = ({ profile, slips, periodId
               const cell = rowCells(slip);
               return (
                 <g key={slip.id ?? row}>
-                  <CenterText x={c.date.center} y={y} size={9}>{cell.date}</CenterText>
-                  <CenterText x={c.day.center} y={y} size={10}>{cell.day}</CenterText>
-                  <RtlText x={c.reason.right} y={y} size={10}>{truncate(cell.reason, 42)}</RtlText>
-                  <CenterText x={c.otStartHours} y={y} size={10}>{cell.otStartHours}</CenterText>
-                  <CenterText x={c.otStartMinutes} y={y} size={10}>{cell.otStartMinutes}</CenterText>
-                  <CenterText x={c.otEndHours} y={y} size={10}>{cell.otEndHours}</CenterText>
-                  <CenterText x={c.otEndMinutes} y={y} size={10}>{cell.otEndMinutes}</CenterText>
-                  <CenterText x={c.totalWorkingHours} y={y} size={10}>{cell.totalWorkingHours}</CenterText>
-                  <CenterText x={c.totalWorkingMinutes} y={y} size={10}>{cell.totalWorkingMinutes}</CenterText>
+                  <CenterText x={c.date.center} y={y} size={8.5}>{cell.date}</CenterText>
+                  <CenterText x={c.day.center} y={y} size={9.5}>{cell.day}</CenterText>
+                  <RtlText x={c.reason.right} y={y} size={9.5}>{truncate(cell.reason, 42)}</RtlText>
+                  <CenterText x={c.otStartHours} y={y} size={9.5}>{cell.otStartHours}</CenterText>
+                  <CenterText x={c.otStartMinutes} y={y} size={9.5}>{cell.otStartMinutes}</CenterText>
+                  <CenterText x={c.otEndHours} y={y} size={9.5}>{cell.otEndHours}</CenterText>
+                  <CenterText x={c.otEndMinutes} y={y} size={9.5}>{cell.otEndMinutes}</CenterText>
+                  <CenterText x={c.totalWorkingHours} y={y} size={9.5}>{cell.totalWorkingHours}</CenterText>
+                  <CenterText x={c.totalWorkingMinutes} y={y} size={9.5}>{cell.totalWorkingMinutes}</CenterText>
                 </g>
               );
             })}

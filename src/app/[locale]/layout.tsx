@@ -13,6 +13,13 @@ const mvWaheed = localFont({
   variable: "--font-mvwaheed",
 });
 
+// Clean Dhivehi font used for the printable OT sheet (same font as the PDF export).
+const notoThaana = localFont({
+  src: "../fonts/NotoSansThaana-Regular.ttf",
+  display: "swap",
+  variable: "--font-noto-thaana",
+});
+
 const faruma = localFont({
   src: "../fonts/Faruma.ttf",
   display: "swap",
@@ -43,7 +50,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={direction}
-      className={`${inter.variable} ${mvWaheed.variable} ${faruma.variable}`}
+      className={`${inter.variable} ${mvWaheed.variable} ${faruma.variable} ${notoThaana.variable}`}
       suppressHydrationWarning
     >
       <body className={`${fontClass} antialiased`}>

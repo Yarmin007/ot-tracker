@@ -14,6 +14,8 @@
   /* Dhivehi fonts are loaded with next/font in layout.tsx */
   --font-faruma: var(--font-faruma-src), Arial, Helvetica, sans-serif;
   --font-dhivehi: var(--font-faruma-src), var(--font-mvwaheed), Arial, sans-serif;
+  /* OT sheet text: Dhivehi from Noto Sans Thaana, Latin/digits fall back to Inter (matches the PDF). */
+  --font-sheet: var(--font-noto-thaana), var(--font-inter), Arial, sans-serif;
 }
 
 body {
