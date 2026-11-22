@@ -65,10 +65,12 @@ export async function proxy(request: NextRequest) {
   if (!onboarded) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_onboarded')
+      .select('is_onboarded, full_name')
       .eq('id', userId)
       .maybeSingle();
-    onboarded = !!profile?.is_onboarded;
+    // New sign-ups (no profile row, or a row created without details) must
+    // complete their details first.
+    onboarded = !!profile?.is_onboarded && !!profile?.full_name?.trim();
     if (onboarded) {
       response.cookies.set(ONBOARDED_COOKIE, userId, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
     }

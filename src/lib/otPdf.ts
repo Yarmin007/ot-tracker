@@ -1,11 +1,12 @@
 import 'server-only';
 import fs from 'fs/promises';
 import path from 'path';
-import { PDFDocument, rgb, type PDFPage, type RGB } from 'pdf-lib';
+import { PDFDocument, rgb, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import {
   LAYOUT,
   NUMBER_COLUMNS,
+  SIGNATURE_COLUMNS,
   SHEET_HEIGHT,
   SHEET_WIDTH,
   paginate,
@@ -225,6 +226,32 @@ export async function buildOtSheetPdf({
   doc.setTitle('OT Sheet');
   doc.setCreator('Hamad School OT');
 
+  // The employee's saved signature, printed in the ސޮއި columns of each row.
+  let signature: PDFImage | null = null;
+  if (profile?.signature?.startsWith('data:image/png;base64,')) {
+    try {
+      signature = await doc.embedPng(profile.signature);
+    } catch {
+      signature = null; // a corrupt image shouldn't stop the sheet
+    }
+  }
+  const ROW_HEIGHT = 24.573;
+  const sign = (page: PDFPage, col: { x0: number; x1: number }, rowBaselineY: number) => {
+    if (!signature) return;
+    const rowTop = rowBaselineY - 16.3; // see ROW_BASELINE in sheetLayout
+    const maxW = col.x1 - col.x0 - 4;
+    const maxH = ROW_HEIGHT - 5;
+    const scale = Math.min(maxW / signature.width, maxH / signature.height);
+    const w = signature.width * scale;
+    const h = signature.height * scale;
+    page.drawImage(signature, {
+      x: (col.x0 + col.x1) / 2 - w / 2,
+      y: SHEET_HEIGHT - (rowTop + ROW_HEIGHT / 2 + h / 2),
+      width: w,
+      height: h,
+    });
+  };
+
   const p = profileValues(profile);
   const months = periodId ? periodMonths(periodId) : null;
   const { profile: pl, period, columns: c } = LAYOUT;
@@ -254,6 +281,14 @@ export async function buildOtSheetPdf({
       w.right(cell.reason, c.reason.right, y, 9, c.reason.maxWidth);
       for (const [key, text] of Object.entries(cell.numbers) as [NumberCell, string][]) {
         w.center(text, NUMBER_COLUMNS[key], y, 9);
+      }
+      if (cell.numbers.baseStartHours) {
+        sign(page, SIGNATURE_COLUMNS.baseStart, y);
+        sign(page, SIGNATURE_COLUMNS.baseEnd, y);
+      }
+      if (cell.numbers.otStartHours) {
+        sign(page, SIGNATURE_COLUMNS.otStart, y);
+        sign(page, SIGNATURE_COLUMNS.otEnd, y);
       }
     });
   }

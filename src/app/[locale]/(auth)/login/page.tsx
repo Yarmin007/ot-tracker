@@ -25,12 +25,46 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   // Errors passed back from the OAuth callback arrive as ?error=...
   const [error, setError] = useState<string | null>(callbackError ? t('authError') : null);
   const [message, setMessage] = useState<string | null>(null);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const signingUp = mode === 'signup';
+
+  const handleSignUp = async () => {
+    if (password.length < 6) {
+      setError(t('passwordTooShort'));
+      setIsLoading(false);
+      return;
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/onboarding` },
+    });
+    if (error) {
+      setError(error.message);
+      setIsLoading(false);
+      return;
+    }
+    if (data.session) {
+      // Signed in straight away (email confirmation disabled): ask for their details.
+      router.replace(`/${locale}/onboarding`);
+      router.refresh();
+      return;
+    }
+    setMessage(t('checkEmail'));
+    setMode('signin');
+    setIsLoading(false);
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setMessage(null);
+
+    if (signingUp) {
+      await handleSignUp();
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -135,19 +169,23 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
           <div>
             <div className="flex justify-between items-center mb-1">
               <label htmlFor="password" className="block text-sm font-bold text-gray-700">{t('password')}</label>
-              <button
-                type="button"
-                onClick={handleResetPassword}
-                disabled={busy}
-                className="text-xs font-bold text-[#991525] hover:text-[#7a111e] transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {t('forgotPassword')}
-              </button>
+              {signingUp ? (
+                <span className="text-xs text-gray-500">{t('passwordHint')}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={busy}
+                  className="text-xs font-bold text-[#991525] hover:text-[#7a111e] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {t('forgotPassword')}
+                </button>
+              )}
             </div>
             <input
               id="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={signingUp ? 'new-password' : 'current-password'}
               dir="ltr"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -162,8 +200,23 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
             disabled={busy}
             className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-extrabold text-white bg-[#991525] hover:bg-[#7a111e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#991525] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isLoading ? t('signingIn') : t('signIn')}
+            {isLoading ? (signingUp ? t('creating') : t('signingIn')) : signingUp ? t('createAccount') : t('signIn')}
           </button>
+
+          <p className="text-center text-sm text-gray-600">
+            {signingUp ? t('haveAccount') : t('noAccount')}{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setMode(signingUp ? 'signin' : 'signup');
+                setError(null);
+                setMessage(null);
+              }}
+              className="font-bold text-[#991525] hover:text-[#7a111e] cursor-pointer"
+            >
+              {signingUp ? t('signInCta') : t('signUpCta')}
+            </button>
+          </p>
         </form>
 
         <div className="mt-8 mb-8 relative">

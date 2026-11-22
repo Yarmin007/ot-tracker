@@ -20,7 +20,15 @@
     "passwordsMismatch": "Passwords do not match.",
     "passwordTooShort": "Password must be at least 6 characters.",
     "passwordUpdated": "Password updated. Redirecting...",
-    "backToLogin": "Back to sign in"
+    "backToLogin": "Back to sign in",
+    "createAccount": "Create account",
+    "haveAccount": "Already have an account?",
+    "noAccount": "New here?",
+    "signUpCta": "Create an account",
+    "signInCta": "Sign in",
+    "creating": "Creating account...",
+    "checkEmail": "Account created. Check your email to confirm it, then sign in.",
+    "passwordHint": "At least 6 characters"
   },
   "Onboarding": {
     "title": "Setup Your Profile",
@@ -41,7 +49,10 @@
     "cardNo": "Record Card No",
     "salary": "Basic Salary",
     "signOut": "Sign Out",
-    "schoolName": "Hamad School"
+    "schoolName": "Hamad School OT Sheet",
+    "navDashboard": "Overtime",
+    "navHistory": "History",
+    "navSettings": "Settings"
   },
   "Overtime": {
     "addTitle": "Add Overtime",
@@ -130,5 +141,30 @@
     "dayType": "Day type",
     "workingDay": "Working day",
     "reasonPlaceholder": "e.g. Preparing exam papers"
+  },
+  "History": {
+    "title": "Sheet history",
+    "subtitle": "Every pay period you have recorded overtime in. Open or download its sheet at any time.",
+    "empty": "No sheets yet. Add overtime and your monthly sheets will appear here.",
+    "view": "View sheet",
+    "download": "Download PDF",
+    "slips": "{count, plural, one {# slip} other {# slips}}",
+    "current": "Current",
+    "pages": "{count, plural, one {# page} other {# pages}}"
+  },
+  "Settings": {
+    "title": "Personal details",
+    "subtitle": "These details are printed on every OT sheet.",
+    "save": "Save details",
+    "saving": "Saving...",
+    "saved": "Saved.",
+    "signature": "Your signature",
+    "signatureHint": "Sign in the box with your finger or mouse, or upload a photo of your signature. It is printed in the signature (ސޮއި) columns of your sheets.",
+    "clear": "Clear",
+    "upload": "Upload image",
+    "signHere": "Sign here",
+    "noSignature": "No signature saved yet.",
+    "signatureNotSaved": "Details saved, but the signature could not be stored yet (database update pending).",
+    "required": "Please fill in all fields."
   }
 }

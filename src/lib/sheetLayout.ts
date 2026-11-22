@@ -70,6 +70,18 @@ export const NUMBER_COLUMNS = {
 
 export type NumberCell = keyof typeof NUMBER_COLUMNS;
 
+/**
+ * Signature (ސޮއި) columns beside each start/end time. The employee's saved
+ * signature is printed here; the final checked-by / approved-by columns are
+ * left blank for hand signing.
+ */
+export const SIGNATURE_COLUMNS = {
+  baseStart: { x0: 475.7, x1: 508.6 },
+  baseEnd: { x0: 397.6, x1: 433.7 },
+  otStart: { x0: 277.0, x1: 313.9 },
+  otEnd: { x0: 198.9, x1: 234.9 },
+} as const;
+
 export const DHIVEHI_MONTHS = [
   'ޖެނުއަރީ', 'ފެބްރުއަރީ', 'މާރޗް', 'އޭޕްރީލް', 'މެއި', 'ޖޫން',
   'ޖުލައި', 'އޮގަސްޓް', 'ސެޕްޓެމްބަރ', 'އޮކްޓޫބަރ', 'ނޮވެމްބަރ', 'ޑިސެމްބަރ',
@@ -90,6 +102,8 @@ export type SheetProfile = {
   designation?: string | null;
   record_card_no?: string | null;
   basic_salary?: number | string | null;
+  /** PNG data URL of the employee's signature. */
+  signature?: string | null;
 } | null;
 
 const hm = (clock: string) => clock.split(':') as [string, string];

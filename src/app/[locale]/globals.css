@@ -18,6 +18,16 @@
   --font-sheet: var(--font-noto-thaana), var(--font-inter), Arial, sans-serif;
 }
 
+@keyframes fade-in-late {
+  0%, 50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes loading-bar {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
+}
+
 @keyframes sheet-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }

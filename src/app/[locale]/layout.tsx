@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from 'next-intl';
@@ -26,9 +26,25 @@ const faruma = localFont({
   variable: "--font-faruma-src",
 });
 
-export const metadata: Metadata = {
-  title: "Hamad School OT",
-  description: "Track and generate overtime reports",
+const APP_TITLE = {
+  en: 'Hamad School OT Sheet',
+  dv: 'ޙަމަދު ސުކޫލް - އިތުރުގަޑީގައި ކުރާ މަސައްކަތުގެ ރެކޯޑް',
+} as const;
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const title = locale === 'dv' ? APP_TITLE.dv : APP_TITLE.en;
+  return {
+    title,
+    description: APP_TITLE.dv,
+    applicationName: APP_TITLE.en,
+    // Home-screen name on iPhone (kept short so it isn't cut off under the icon).
+    appleWebApp: { capable: true, title: 'Hamad OT', statusBarStyle: 'default' },
+  };
+}
+
+export const viewport: Viewport = {
+  themeColor: '#991525',
 };
 
 export default async function RootLayout({
