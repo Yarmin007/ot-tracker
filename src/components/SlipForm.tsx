@@ -52,8 +52,24 @@ export function SlipForm({
   const t = useTranslations('Overtime');
   const words = useDurationWords();
   const [date, setDate] = useState(() => slip?.date ?? daysAgo(0));
-  const [start, setStart] = useState(shortTime(slip?.start_time) || defaultTimes?.start || '');
-  const [end, setEnd] = useState(shortTime(slip?.end_time) || defaultTimes?.end || '');
+  // New entries reuse the last entry's times, moved past anything already
+  // logged on that day so the form never opens with an overlap.
+  const [initialTimes] = useState(() => {
+    if (slip) return { start: shortTime(slip.start_time), end: shortTime(slip.end_time) };
+    if (!defaultTimes) return { start: '', end: '' };
+    const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+    const fmt = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const duration = (toMin(defaultTimes.end) - toMin(defaultTimes.start) + 1440) % 1440 || 60;
+    let s = defaultTimes.start;
+    for (let i = 0; i < 20; i++) {
+      const clash = findOverlap(otherSlips, { date: daysAgo(0), start_time: s, end_time: fmt(toMin(s) + duration) });
+      if (!clash) break;
+      s = shortTime(clash.end_time);
+    }
+    return { start: s, end: fmt(toMin(s) + duration) };
+  });
+  const [start, setStart] = useState(initialTimes.start);
+  const [end, setEnd] = useState(initialTimes.end);
   const [reason, setReason] = useState(slip?.reason ?? '');
   const [holidayOn, setHolidayOn] = useState(!!slip?.is_holiday);
   const [pending, setPending] = useState(false);

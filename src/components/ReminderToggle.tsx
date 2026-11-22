@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { removePushSubscription, savePushSubscription, sendTestNotification } from '@/app/[locale]/settings/pushActions';
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+// Cleaned in case the dashboard value was pasted with "=", quotes or spaces.
+const VAPID_PUBLIC_KEY = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '')
+  .trim()
+  .replace(/^[A-Z_]+=/, '')
+  .replace(/^=+/, '')
+  .replace(/^["']|["']$/g, '')
+  .trim();
 
 /** base64url -> Uint8Array, as PushManager.subscribe expects. */
 function urlBase64ToUint8Array(base64: string) {
@@ -102,7 +108,7 @@ export function ReminderToggle({ locale }: { locale: string }) {
       const saved = await savePushSubscription(sub.toJSON(), locale);
       if (!saved.ok) throw new Error(saved.error);
       const result = await sendTestNotification(sub.endpoint);
-      if (!result.ok) throw new Error(result.error === 'not-registered' ? t('testNotRegistered') : result.error);
+      if (!result.ok) throw new Error(result.error === 'not-registered' ? t('testNotRegistered') : result.error === 'not-configured' ? t('notConfigured') : result.error);
       setTestState('sent');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     options: {
       redirectTo: `${origin}/auth/callback?next=/${locale}/dashboard&handoff=${h}`,
       skipBrowserRedirect: true,
+      queryParams: { prompt: 'select_account' },
     },
   });
   if (error || !data.url) return NextResponse.redirect(`${origin}/${locale}/login?error=CouldNotAuthenticate`);

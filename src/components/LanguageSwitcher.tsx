@@ -30,9 +30,9 @@ export function LanguageSwitcher() {
           lang={code}
           aria-pressed={locale === code}
           onClick={() => switchLocale(code)}
-          className={`px-3 py-1.5 text-xs font-extrabold rounded-md transition-all duration-200 cursor-pointer ${
+          className={`px-3 py-2 sm:py-1.5 text-xs font-extrabold rounded-md transition-all duration-200 cursor-pointer ${
             locale === code
-              ? 'bg-[#991525] text-white shadow-md'
+              ? 'hidden sm:block bg-[#991525] text-white shadow-md'
               : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200'
           }`}
         >

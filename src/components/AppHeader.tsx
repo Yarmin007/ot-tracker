@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Logo } from '@/components/Logo';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { signOut } from '@/app/[locale]/dashboard/actions';
+import { SignOutButton } from '@/components/SignOutButton';
 import { Avatar } from '@/components/Avatar';
 import { createClient } from '@/lib/supabase/server';
 
@@ -64,7 +64,7 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
             <Logo className="w-10 h-10 shrink-0" />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-xs sm:text-sm font-bold text-gray-500">{t('schoolName')}</span>
-              <span className="block truncate text-base sm:text-xl font-extrabold text-[#991525]">{t('appSubtitle')}</span>
+              <span className="block truncate text-[15px] sm:text-xl font-extrabold text-[#991525]">{t('appSubtitle')}</span>
             </span>
           </Link>
 
@@ -72,21 +72,10 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <LanguageSwitcher />
-            <Link href={`/${locale}/settings`} title={t('navSettings')} aria-label={t('navSettings')} className="shrink-0">
+            <Link href={`/${locale}/settings`} title={t('navSettings')} aria-label={t('navSettings')} className="shrink-0 hidden sm:block">
               <Avatar src={me?.avatar_url} name={me?.full_name} className="w-9 h-9 text-xs" />
             </Link>
-            <form action={signOut}>
-              <input type="hidden" name="locale" value={locale} />
-              <button
-                type="submit"
-                title={t('signOut')}
-                aria-label={t('signOut')}
-                className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#991525] transition-colors cursor-pointer p-2 rounded-xl hover:bg-gray-100"
-              >
-                <svg className="w-5 h-5 rtl:-scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                <span className="hidden lg:inline">{t('signOut')}</span>
-              </button>
-            </form>
+            <SignOutButton locale={locale} label={t('signOut')} pendingLabel={t('signingOut')} />
           </div>
         </div>
 

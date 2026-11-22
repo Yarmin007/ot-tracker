@@ -63,7 +63,8 @@
     "navDashboard": "Overtime",
     "navHistory": "History",
     "navSettings": "Settings",
-    "appSubtitle": "OT Record Sheet"
+    "appSubtitle": "OT Record Sheet",
+    "signingOut": "Signing out…"
   },
   "Overtime": {
     "addTitle": "Add Overtime",

@@ -8,13 +8,31 @@ export const REMINDER_MESSAGES = {
 
 export type StoredSubscription = { endpoint: string; p256dh: string; auth: string; locale: string | null };
 
-/** Configure web-push; false when the VAPID keys are missing. */
+/**
+ * Tolerate keys pasted with extras into a dashboard: surrounding spaces or
+ * quotes, a leading "NAME=" or "=", or base64 padding.
+ */
+const cleanKey = (value: string | undefined) =>
+  (value ?? '')
+    .trim()
+    .replace(/^[A-Z_]+=/, '')
+    .replace(/^=+/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim()
+    .replace(/=+$/, '');
+
+/** Configure web-push; false when the VAPID keys are missing or invalid. */
 export function configurePush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const publicKey = cleanKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const privateKey = cleanKey(process.env.VAPID_PRIVATE_KEY);
   if (!publicKey || !privateKey) return false;
-  webpush.setVapidDetails('https://ot-tracker-seven.vercel.app', publicKey, privateKey);
-  return true;
+  try {
+    webpush.setVapidDetails('https://ot-tracker-hamad.vercel.app', publicKey, privateKey);
+    return true;
+  } catch (err) {
+    console.error('[push] invalid VAPID keys:', err instanceof Error ? err.message : err);
+    return false;
+  }
 }
 
 /**

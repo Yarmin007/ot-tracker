@@ -5,10 +5,12 @@ import { AppHeader } from '@/components/AppHeader';
 import { ProfileForm } from '@/components/ProfileForm';
 import { ReminderToggle } from '@/components/ReminderToggle';
 import { InstallApp } from '@/components/InstallApp';
+import { SignOutButton } from '@/components/SignOutButton';
 
 export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'Settings' });
+  const tDash = await getTranslations({ locale, namespace: 'Dashboard' });
   const supabase = await createClient();
 
   const { data: claimsData } = await supabase.auth.getClaims();
@@ -29,6 +31,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
           <ReminderToggle locale={locale} />
         </div>
         <ProfileForm locale={locale} initial={profile} mode="settings" />
+        <div className="mt-8 pb-24 md:pb-8">
+          <SignOutButton locale={locale} label={tDash('signOut')} pendingLabel={tDash('signingOut')} variant="full" />
+        </div>
       </main>
     </div>
   );

@@ -214,6 +214,8 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=/${locale}/dashboard`,
+        // Always show Google's account chooser instead of reusing the last account.
+        queryParams: { prompt: 'select_account' },
       },
     });
 
@@ -307,7 +309,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
                   type="button"
                   onClick={handleResetPassword}
                   disabled={busy}
-                  className="text-xs font-bold text-[#991525] hover:text-[#7a111e] transition-colors cursor-pointer disabled:opacity-50"
+                  className="py-3 -my-3 ps-2 text-xs font-bold text-[#991525] hover:text-[#7a111e] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {t('forgotPassword')}
                 </button>
@@ -343,7 +345,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
                 setError(null);
                 setMessage(null);
               }}
-              className="font-bold text-[#991525] hover:text-[#7a111e] cursor-pointer"
+              className="py-3 -my-3 px-1 font-bold text-[#991525] hover:text-[#7a111e] cursor-pointer"
             >
               {signingUp ? t('signInCta') : t('signUpCta')}
             </button>

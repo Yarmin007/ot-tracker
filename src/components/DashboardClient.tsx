@@ -79,6 +79,9 @@ export function DashboardClient({
     const { year, month, prevYear, prevMonth } = getPeriodRange(periodId);
     const prev = t(`months.${MONTH_KEYS[prevMonth]}`);
     const cur = t(`months.${MONTH_KEYS[month]}`);
+    if (prevYear === year && String(year) === currentPeriodId.slice(0, 4)) {
+      return locale === 'dv' ? `${prev} 16 – ${cur} 15` : `16 ${prev} – 15 ${cur}`;
+    }
     if (prevYear === year) {
       return locale === 'dv' ? `${prev} 16 – ${cur} 15، ${year}` : `16 ${prev} – 15 ${cur} ${year}`;
     }
@@ -253,7 +256,7 @@ export function DashboardClient({
             <p className="text-sm text-gray-500">{t('addFirst')}</p>
           </div>
         ) : (
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {activeSlips.map((slip) => {
               const b = breakdowns.get(slip) ?? slipBreakdown(slip);
               const { day, month } = parseDateOnly(slip.date);
@@ -265,7 +268,7 @@ export function DashboardClient({
                       <div className="text-[11px] font-semibold">{t(`months.${MONTH_KEYS[month]}`)}</div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 font-semibold">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 font-semibold">
                         {t(`days.${DAY_KEYS[parseDateOnly(slip.date).weekday]}`)}
                         {b.holiday && <span className="rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5">{t('holidayBadge')}</span>}
                       </div>
@@ -280,7 +283,7 @@ export function DashboardClient({
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <div className="flex flex-wrap gap-1.5 text-xs" dir="ltr">
+                    <div className="flex flex-wrap gap-1.5 text-xs min-w-0" dir="ltr">
                       {b.base && <span className="rounded-lg bg-gray-100 text-gray-600 px-2 py-1 tabular-nums">{b.base.start}–{b.base.end}</span>}
                       {b.ot && <span className={`rounded-lg px-2 py-1 tabular-nums font-bold ${b.holiday ? 'bg-amber-100 text-amber-800' : 'bg-[#991525]/10 text-[#991525]'}`}>{b.ot.start}–{b.ot.end}</span>}
                     </div>

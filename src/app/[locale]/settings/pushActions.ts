@@ -40,7 +40,7 @@ export async function removePushSubscription(endpoint: string): Promise<PushResu
 export async function sendTestNotification(endpoint: string): Promise<PushResult> {
   const { supabase, userId } = await currentUser();
   if (!userId) return { ok: false, error: 'unauthorized' };
-  if (!configurePush()) return { ok: false, error: 'Push is not configured on the server (VAPID keys missing).' };
+  if (!configurePush()) return { ok: false, error: 'not-configured' };
   const { data, error } = await supabase
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth, locale')
