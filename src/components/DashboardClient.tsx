@@ -1,5 +1,6 @@
 "use client";
 
+import { InstallApp } from '@/components/InstallApp';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -16,6 +17,7 @@ import {
   otTotals,
   parseDateOnly,
   slipBreakdown,
+  breakdownAll,
   splitMinutes,
 } from '@/lib/ot';
 import { Duration } from '@/components/Duration';
@@ -46,12 +48,17 @@ export function DashboardClient({
   locale,
   slips,
   currentPeriodId,
+  today,
 }: {
   locale: string;
   slips: DashboardSlip[];
   currentPeriodId: string;
+  /** Today in the Maldives (YYYY-MM-DD), for the 15th-of-the-month reminder. */
+  today?: string;
 }) {
   const t = useTranslations('Overtime');
+  const tr = useTranslations('Reminder');
+  const isSubmissionDay = !!today && today.endsWith('-15');
   const searchParams = useSearchParams();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -91,6 +98,8 @@ export function DashboardClient({
   }, [slips, currentPeriodId, activePeriodId]);
 
   const totals = otTotals(activeSlips);
+  // Each day's 2-hour base is shared by that day's entries (in time order).
+  const breakdowns = useMemo(() => breakdownAll(slips), [slips]);
 
   const shiftPeriod = (delta: number) => {
     const [y, m] = activePeriodId.split('-').map(Number);
@@ -126,6 +135,24 @@ export function DashboardClient({
 
   return (
     <>
+      {isSubmissionDay && (
+        <div role="status" className="print:hidden mb-6 rounded-2xl border border-[#991525]/20 bg-white shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="flex items-center gap-3 flex-1">
+            <span className="shrink-0 w-10 h-10 rounded-xl bg-[#991525] text-white flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-4-5.7V5a2 2 0 10-4 0v.3A6 6 0 006 11v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </span>
+            <span className="font-bold text-gray-900">{tr('banner')}</span>
+          </span>
+          <a href={`/${locale}/sheet?period=${currentPeriodId}`} className="shrink-0 text-center px-4 py-2.5 rounded-xl bg-[#991525] text-white text-sm font-bold hover:bg-[#7a111e]">
+            {tr('bannerAction')}
+          </a>
+        </div>
+      )}
+
+      <div className="sm:hidden">
+        <InstallApp variant="banner" />
+      </div>
+
       {notice && (
         <div role="status" className="print:hidden mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 font-medium flex justify-between gap-4">
           <span>{notice}</span>
@@ -228,7 +255,7 @@ export function DashboardClient({
         ) : (
           <ul className="grid gap-3 md:grid-cols-2">
             {activeSlips.map((slip) => {
-              const b = slipBreakdown(slip);
+              const b = breakdowns.get(slip) ?? slipBreakdown(slip);
               const { day, month } = parseDateOnly(slip.date);
               return (
                 <li key={slip.id} className={`bg-white rounded-2xl border shadow-sm p-4 ${b.holiday ? 'border-amber-200' : 'border-gray-200'}`}>
@@ -245,10 +272,10 @@ export function DashboardClient({
                       <p className="text-gray-900 font-semibold leading-snug mt-0.5 line-clamp-2">{slip.reason}</p>
                     </div>
                     <div className="shrink-0 text-end">
-                      <div className={`text-lg font-extrabold ${b.otMinutes ? (b.holiday ? 'text-amber-700' : 'text-[#991525]') : 'text-gray-300'}`}>
+                      <div className={`text-lg font-extrabold ${b.otMinutes ? (b.holiday ? 'text-amber-700' : 'text-[#991525]') : 'text-gray-400'}`}>
                         <Duration minutes={b.otMinutes} unitClass="text-sm" />
                       </div>
-                      <div className="text-[11px] font-semibold text-gray-500">{t('otShort')}</div>
+                      {b.otMinutes > 0 && <div className="text-[11px] font-semibold text-gray-500">{t('otShort')}</div>}
                     </div>
                   </div>
 
@@ -264,7 +291,7 @@ export function DashboardClient({
                       </button>
                       <form action={deleteSlip} className="w-10 h-10 flex items-center justify-center">
                         <input type="hidden" name="slipId" value={slip.id} />
-                        <DeleteSubmitButton label={t('delete')} confirmMessage={t('deleteConfirm')} />
+                        <DeleteSubmitButton label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
                       </form>
                     </div>
                   </div>
@@ -325,7 +352,7 @@ export function DashboardClient({
 
               <tbody className="bg-white divide-y divide-gray-100 text-center">
                 {activeSlips.map((slip) => {
-                  const b = slipBreakdown(slip);
+                  const b = breakdowns.get(slip) ?? slipBreakdown(slip);
                   const [baseStartH, baseStartM] = clockParts(b.base?.start);
                   const [baseEndH, baseEndM] = clockParts(b.base?.end);
                   const [baseTotH, baseTotM] = durationParts(b.base?.minutes ?? 0);
@@ -377,7 +404,7 @@ export function DashboardClient({
                           </button>
                           <form action={deleteSlip}>
                             <input type="hidden" name="slipId" value={slip.id} />
-                            <DeleteSubmitButton label={t('delete')} confirmMessage={t('deleteConfirm')} />
+                            <DeleteSubmitButton label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
                           </form>
                         </div>
                       </td>
@@ -415,6 +442,7 @@ export function DashboardClient({
             onDone={afterSave}
             recentReasons={slipToEdit ? [] : recentReasons}
             defaultTimes={defaultTimes}
+            otherSlips={slips}
           />
         </ModalShell>
       )}

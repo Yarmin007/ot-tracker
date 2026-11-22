@@ -5,7 +5,7 @@
 // Within every hours/minutes pair on this form, MINUTES is the right-hand
 // column and HOURS the left-hand one.
 
-import { DHIVEHI_DAYS, getPeriodRange, parseDateOnly, slipBreakdown, splitMinutes } from '@/lib/ot';
+import { DHIVEHI_DAYS, getPeriodRange, parseDateOnly, slipBreakdown, splitMinutes, type SlipBreakdown } from '@/lib/ot';
 
 export const SHEET_WIDTH = 841.89;
 export const SHEET_HEIGHT = 595.28;
@@ -109,8 +109,9 @@ export type SheetProfile = {
 const hm = (clock: string) => clock.split(':') as [string, string];
 
 /** Text for each cell of one table row, following the overtime rules in lib/ot.ts. */
-export function rowCells(slip: SheetSlip) {
-  const b = slipBreakdown(slip);
+export function rowCells(slip: SheetSlip, breakdown?: SlipBreakdown) {
+  // Pass the breakdown from breakdownAll() so a day's 2-hour base is shared across its entries.
+  const b = breakdown ?? slipBreakdown(slip);
   const numbers: Partial<Record<NumberCell, string>> = {};
 
   if (b.base) {

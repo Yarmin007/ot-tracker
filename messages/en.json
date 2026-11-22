@@ -27,8 +27,13 @@
     "signUpCta": "Create an account",
     "signInCta": "Sign in",
     "creating": "Creating account...",
-    "checkEmail": "Account created. Check your email to confirm it, then sign in.",
-    "passwordHint": "At least 6 characters"
+    "checkEmail": "Account created. We've sent a confirmation email; open it, then sign in. Check your spam folder if you don't see it.",
+    "passwordHint": "At least 6 characters",
+    "alreadyRegistered": "This email is already registered (for example with Google). Sign in with Google, or tap 'Forgot password?' to set a password for it.",
+    "invalidCredentials": "Wrong email or password. If you usually sign in with Google, use the Google button, or tap 'Forgot password?' to set a password.",
+    "emailNotConfirmed": "Please confirm your email first. We can send the confirmation email again.",
+    "resendConfirmation": "Resend confirmation email",
+    "confirmationResent": "Confirmation email sent. Check your inbox and spam folder."
   },
   "Onboarding": {
     "title": "Setup Your Profile",
@@ -49,10 +54,11 @@
     "cardNo": "Record Card No",
     "salary": "Basic Salary",
     "signOut": "Sign Out",
-    "schoolName": "Hamad School OT Sheet",
+    "schoolName": "Hamad School",
     "navDashboard": "Overtime",
     "navHistory": "History",
-    "navSettings": "Settings"
+    "navSettings": "Settings",
+    "appSubtitle": "OT Record Sheet"
   },
   "Overtime": {
     "addTitle": "Add Overtime",
@@ -142,7 +148,12 @@
     "workingDay": "Working day",
     "reasonPlaceholder": "e.g. Preparing exam papers",
     "hoursWord": "h",
-    "minutesWord": "min"
+    "minutesWord": "min",
+    "hoursAndWord": "h",
+    "noOvertimeShort": "No overtime",
+    "deleteTitle": "Delete this entry?",
+    "deleteHint": "This can't be undone.",
+    "cancel": "Cancel"
   },
   "History": {
     "title": "Sheet history",
@@ -171,7 +182,15 @@
     "photo": "Profile picture",
     "addPhoto": "Add photo",
     "changePhoto": "Change photo",
-    "removePhoto": "Remove"
+    "removePhoto": "Remove",
+    "cropPhotoTitle": "Adjust photo",
+    "cleanSignatureTitle": "Clean up signature",
+    "cropHint": "Drag to move. Pinch, scroll or use the slider to zoom.",
+    "zoom": "Zoom",
+    "cancel": "Cancel",
+    "apply": "Use this",
+    "inkStrength": "Ink",
+    "inkStrengthHint": "Lighter ← → Bolder"
   },
   "Viewer": {
     "back": "Back",
@@ -181,5 +200,45 @@
     "zoom": "Zoom in",
     "fit": "Fit to screen",
     "page": "Page {n} of {total}"
+  },
+  "Reminder": {
+    "title": "Monthly reminder",
+    "hint": "Get a notification on the 15th of every month to submit your OT sheet.",
+    "needsInstall": "On iPhone, first add this app to your Home Screen (Share → Add to Home Screen), then open it from there to turn on reminders.",
+    "blocked": "Notifications are blocked for this site. Allow them in your browser settings to turn on reminders.",
+    "unsupported": "This browser doesn't support notifications.",
+    "banner": "Reminder: please submit your OT sheet.",
+    "bannerAction": "View sheet",
+    "testButton": "Send a test notification",
+    "testSending": "Sending…",
+    "testSent": "Sent! It should appear in a few seconds.",
+    "testNotRegistered": "This device isn't registered. Turn the reminder off and on again."
+  },
+  "Install": {
+    "title": "Install the app",
+    "cardHint": "Add Hamad OT to your home screen. It opens full-screen like a normal app, and on iPhone it's needed for reminders.",
+    "bannerHint": "Open it from your home screen like a normal app.",
+    "install": "Install",
+    "howTo": "Show me how",
+    "show": "How",
+    "dismiss": "Dismiss",
+    "guideTitle": "Add to Home Screen",
+    "iosIntro": "Do this in Safari on your iPhone or iPad.",
+    "androidIntro": "Do this in Chrome on your Android phone.",
+    "ios1": "Tap the Share button",
+    "ios1Hint": "At the bottom of Safari (top on iPad). On newer iPhones, tap ••• first, then Share.",
+    "ios2": "Tap “Add to Home Screen”",
+    "ios2Hint": "Scroll down the list if you don't see it.",
+    "ios3": "Tap “Add”",
+    "ios3Hint": "Top-right corner. You can keep the name “Hamad OT”.",
+    "android1": "Tap the ⋮ menu",
+    "android1Hint": "Top-right corner of Chrome.",
+    "android2": "Tap “Install app” or “Add to Home screen”",
+    "android2Hint": "The wording depends on your phone.",
+    "android3": "Tap “Install”",
+    "android3Hint": "Confirm in the pop-up.",
+    "done": "Open Hamad OT from your home screen",
+    "doneHint": "Look for the school crest icon.",
+    "gotIt": "Got it"
   }
 }

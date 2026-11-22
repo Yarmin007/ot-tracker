@@ -20,6 +20,7 @@ import {
 } from '@/lib/sheetLayout';
 import { HEADER_CELLS, LOGO_BOX, STATIC_TEXTS, tableLines } from '@/lib/sheetTemplate';
 import { LOGO_PATHS, LOGO_VIEWBOX } from '@/lib/logoPaths';
+import { breakdownAll } from '@/lib/ot';
 
 // The sheet is drawn once through a small "surface" interface, which is
 // implemented for PDF (download / print) and SVG (the in-app sheet viewer), so
@@ -251,9 +252,13 @@ function drawPage(surface: Surface, fontsLoaded: { waheed: FKFont; faruma: FKFon
     surface.signature((col.x0 + col.x1) / 2 - sw / 2, rowTop + ROW_HEIGHT / 2 - sh / 2, sw, sh);
   };
 
+  // Breakdowns over the whole period, so a day's 2-hour base is shared across
+  // that day's entries even when they fall on different pages.
+  const breakdowns = breakdownAll(input.slips);
+
   pageSlips.forEach((slip, row) => {
     const y = rowBaseline(row);
-    const cell = rowCells(slip);
+    const cell = rowCells(slip, breakdowns.get(slip));
     w.center(cell.date, c.date.center, y, 8.5, c.date.maxWidth);
     w.center(cell.day, c.day.center, y, 9, c.day.maxWidth);
     w.right(cell.reason, c.reason.right, y, 9, c.reason.maxWidth);

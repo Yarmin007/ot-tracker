@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import Script from 'next/script';
+import { INSTALL_PROMPT_SCRIPT } from '@/lib/installPrompt';
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from 'next-intl';
@@ -28,7 +30,7 @@ const faruma = localFont({
 
 const APP_TITLE = {
   en: 'Hamad School OT Sheet',
-  dv: 'ޙަމަދު ސުކޫލް - އިތުރުގަޑީގައި ކުރާ މަސައްކަތުގެ ރެކޯޑް',
+  dv: 'ހަމަދު ސުކޫލް - އިތުރުގަޑި ރިކޯޑް ޝީޓް',
 } as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -70,6 +72,8 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${fontClass} antialiased`}>
+        {/* Catch Android/Chrome's install prompt even if it fires before React loads. */}
+        <Script id="install-prompt" strategy="beforeInteractive">{INSTALL_PROMPT_SCRIPT}</Script>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

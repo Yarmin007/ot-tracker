@@ -80,9 +80,11 @@ export function shortTime(t: string | null | undefined) {
 // ---------------------------------------------------------------------------
 // Overtime rules
 //
-// Working days: the first 2 hours of a session complete the official 8 hours
-// ("base" part); only the time after that is overtime, totalled under
-// working days. Example: 13:30-18:00 -> base 13:30-15:30, OT 15:30-18:00 (2h30).
+// Working days: the first 2 hours worked that DAY complete the official 8 hours
+// ("base" part); only the time after that is overtime, totalled under working
+// days. The 2 hours are shared by all of a day's entries in time order, e.g.
+// 13:30-14:30 (1h base) + 17:30-18:30 (1h base) + 20:00-22:00 (2h OT).
+// A single entry 13:30-18:00 -> base 13:30-15:30, OT 15:30-18:00 (2h30).
 //
 // Holidays (every Friday, plus weekdays marked as a public holiday): the whole
 // session is overtime, totalled under holidays.
@@ -130,12 +132,18 @@ export type SlipBreakdown = {
   otMinutes: number;
 };
 
-export function slipBreakdown(slip: SlipTimes): SlipBreakdown {
+/**
+ * Split one entry into its base part and overtime part.
+ * `baseUsedBefore` is how much of the day's 2-hour base was already used by
+ * that day's earlier entries (see breakdownAll).
+ */
+export function slipBreakdown(slip: SlipTimes, baseUsedBefore = 0): SlipBreakdown {
   const start = toMinutes(slip.start_time);
   let duration = toMinutes(slip.end_time) - start;
   if (duration < 0) duration += 1440; // past midnight
   const holiday = isHolidaySlip(slip);
-  const baseMinutes = holiday ? 0 : Math.min(BASE_MINUTES, duration);
+  const baseLeft = Math.max(0, BASE_MINUTES - baseUsedBefore);
+  const baseMinutes = holiday ? 0 : Math.min(baseLeft, duration);
   const otMinutes = duration - baseMinutes;
 
   return {
@@ -147,12 +155,40 @@ export function slipBreakdown(slip: SlipTimes): SlipBreakdown {
   };
 }
 
+const startMinutes = (s: SlipTimes) => toMinutes(s.start_time);
+
+/**
+ * Breakdowns for a set of entries, sharing each day's 2-hour base across that
+ * day's entries in start-time order. Pass ALL entries of a day together.
+ */
+export function breakdownAll<T extends SlipTimes>(slips: T[]): Map<T, SlipBreakdown> {
+  const ordered = [...slips].sort((a, b) => a.date.localeCompare(b.date) || startMinutes(a) - startMinutes(b));
+  const usedByDate = new Map<string, number>();
+  const result = new Map<T, SlipBreakdown>();
+  for (const slip of ordered) {
+    const used = usedByDate.get(slip.date) ?? 0;
+    const b = slipBreakdown(slip, used);
+    usedByDate.set(slip.date, used + (b.base?.minutes ?? 0));
+    result.set(slip, b);
+  }
+  return result;
+}
+
+/** Base minutes already used on `date` by entries that start before `startTime` (for previews). */
+export function baseUsedBefore(slips: SlipTimes[], date: string, startTime: string, excludeId?: string) {
+  const sameDay = (slips as (SlipTimes & { id?: string })[]).filter((s) => s.date === date && s.id !== excludeId);
+  const earlier = sameDay.filter((s) => startMinutes(s) < toMinutes(startTime));
+  const map = breakdownAll(earlier);
+  let used = 0;
+  for (const b of map.values()) used += b.base?.minutes ?? 0;
+  return Math.min(used, BASE_MINUTES);
+}
+
 /** Overtime totals for a list of slips, split by working days and holidays. */
 export function otTotals(slips: SlipTimes[]) {
   let working = 0;
   let holiday = 0;
-  for (const s of slips) {
-    const b = slipBreakdown(s);
+  for (const b of breakdownAll(slips).values()) {
     if (b.holiday) holiday += b.otMinutes;
     else working += b.otMinutes;
   }
@@ -163,12 +199,17 @@ export function otTotals(slips: SlipTimes[]) {
 export const splitMinutes = (minutes: number) => ({ h: Math.floor(minutes / 60), m: minutes % 60 });
 
 /**
- * Duration in words, e.g. "5 ގަޑި 38 މިނެޓް" / "5 h 38 min".
- * Whole hours drop the minutes ("2 ގަޑި"); under an hour drops the hours ("30 މިނެޓް").
+ * Duration in words. Dhivehi joins hours and minutes with the "-އާއި" form:
+ * "5 ގަޑިއިރާއި 38 މިނެޓު", whole hours "5 ގަޑިއިރު", under an hour "30 މިނެޓު".
+ * Zero minutes returns `zeroText` (e.g. "އިތުރު ވަގުތު ނެތް").
  */
-export function durationWords(minutes: number, hoursWord: string, minutesWord: string) {
+export function durationWords(
+  minutes: number,
+  words: { hours: string; hoursAnd: string; minutes: string; zero: string },
+) {
   const { h, m } = splitMinutes(Math.max(0, Math.round(minutes)));
-  if (h && m) return `${h} ${hoursWord} ${m} ${minutesWord}`;
-  if (h) return `${h} ${hoursWord}`;
-  return `${m} ${minutesWord}`;
+  if (!h && !m) return words.zero;
+  if (h && m) return `${h} ${words.hoursAnd} ${m} ${words.minutes}`;
+  if (h) return `${h} ${words.hours}`;
+  return `${m} ${words.minutes}`;
 }

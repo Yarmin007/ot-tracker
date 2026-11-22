@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { ImageCropper, loadImageFile } from '@/components/ImageCropper';
+import { inkBounds, traceSignature, trimToInk } from '@/lib/signatureTrace';
 
-const INK = '#13235b'; // blue-black pen
+const INK = '#000000'; // black, like the cleaned-up uploads
 const MAX_W = 600;
 const MAX_H = 220;
+const DEFAULT_STRENGTH = 40; // upload clean-up: 0 = cleanest, 100 = keep the most ink
 
 /**
- * Draw (finger / mouse / pen) or upload a signature. The result is trimmed to
- * the ink, scaled down, and kept as a transparent PNG data URL in a hidden
- * <input name={name}> so it is submitted with the surrounding form.
+ * Draw (finger / mouse / pen) or upload a signature. Uploaded photos open in a
+ * dialog that removes the paper and turns the ink pure black (adjustable), with
+ * pan / zoom to frame it. The result is trimmed to the ink, scaled down, and
+ * kept as a transparent PNG data URL in a hidden <input name={name}>.
  */
 export function SignaturePad({ name, initial }: { name: string; initial?: string | null }) {
   const t = useTranslations('Settings');
@@ -19,6 +23,25 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
   const last = useRef<{ x: number; y: number } | null>(null);
   const [value, setValue] = useState(initial ?? '');
   const [hasInk, setHasInk] = useState(!!initial);
+  // Upload clean-up dialog: the raw photo and how much ink to keep.
+  const [raw, setRaw] = useState<HTMLCanvasElement | null>(null);
+  const [strength, setStrength] = useState(DEFAULT_STRENGTH);
+  const deferredStrength = useDeferredValue(strength);
+  const traced = useMemo(() => (raw ? traceSignature(raw, deferredStrength) : null), [raw, deferredStrength]);
+  // Where the signature is in the photo, so the dialog opens zoomed onto it.
+  const [focus, setFocus] = useState<ReturnType<typeof inkBounds>>(null);
+
+  /** Show an image centred on the pad (replacing what's there). */
+  const showOnPad = (src: CanvasImageSource & { width: number; height: number }) => {
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext('2d')!;
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const scale = Math.min((rect.width - 24) / src.width, (rect.height - 24) / src.height, 1);
+    const w = src.width * scale;
+    const h = src.height * scale;
+    ctx.drawImage(src, (rect.width - w) / 2, (rect.height - h) / 2, w, h);
+  };
 
   // Size the canvas to its box (sharp on high-DPI screens) and show the saved signature.
   useEffect(() => {
@@ -43,36 +66,9 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
 
   /** Crop to the ink and export a compact transparent PNG. */
   const exportSignature = () => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    const { width, height } = canvas;
-    const pixels = ctx.getImageData(0, 0, width, height).data;
-    let minX = width, minY = height, maxX = -1, maxY = -1;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (pixels[(y * width + x) * 4 + 3] > 16) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-    if (maxX < 0) {
-      setValue('');
-      setHasInk(false);
-      return;
-    }
-    const pad = 6;
-    const cw = maxX - minX + 1 + pad * 2;
-    const ch = maxY - minY + 1 + pad * 2;
-    const scale = Math.min(MAX_W / cw, MAX_H / ch, 1);
-    const out = document.createElement('canvas');
-    out.width = Math.round(cw * scale);
-    out.height = Math.round(ch * scale);
-    out.getContext('2d')!.drawImage(canvas, minX - pad, minY - pad, cw, ch, 0, 0, out.width, out.height);
-    setValue(out.toDataURL('image/png'));
-    setHasInk(true);
+    const out = trimToInk(canvasRef.current!, MAX_W, MAX_H);
+    setValue(out ? out.toDataURL('image/png') : '');
+    setHasInk(!!out);
   };
 
   const point = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -120,33 +116,29 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
     setHasInk(false);
   };
 
-  /** Load a photo/scan, make the paper transparent, and place it on the pad. */
-  const onUpload = (file: File | undefined) => {
+  /** Open a photo/scan in the clean-up dialog. */
+  const onUpload = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    input.value = ''; // picking the same file again should reopen the dialog
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const canvas = canvasRef.current!;
-      const ctx = canvas.getContext('2d')!;
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const scale = Math.min((rect.width - 24) / img.width, (rect.height - 24) / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, (rect.width - w) / 2, (rect.height - h) / 2, w, h);
-      // Remove the light background so only the ink is printed.
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const px = data.data;
-      for (let i = 0; i < px.length; i += 4) {
-        const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-        if (lum > 170) px[i + 3] = 0;
-        else px[i + 3] = Math.min(px[i + 3], Math.round(((170 - lum) / 170) * 255 * 1.6));
-      }
-      ctx.putImageData(data, 0, 0);
-      exportSignature();
-    };
-    img.src = url;
+    try {
+      const img = await loadImageFile(file, 1400);
+      setStrength(DEFAULT_STRENGTH);
+      setFocus(inkBounds(traceSignature(img, DEFAULT_STRENGTH)));
+      setRaw(img);
+    } catch {
+      /* not an image the browser can read */
+    }
+  };
+
+  /** Use the framed, cleaned-up signature. */
+  const onCleaned = (framed: HTMLCanvasElement) => {
+    setRaw(null);
+    const out = trimToInk(framed, MAX_W, MAX_H);
+    if (!out) return;
+    showOnPad(out);
+    setValue(out.toDataURL('image/png'));
+    setHasInk(true);
   };
 
   return (
@@ -176,9 +168,38 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
         </button>
         <label className="px-3.5 py-2 rounded-xl border border-gray-300 bg-white text-sm font-bold text-gray-700 hover:bg-gray-50 cursor-pointer">
           {t('upload')}
-          <input type="file" accept="image/*" className="sr-only" onChange={(e) => onUpload(e.target.files?.[0])} />
+          <input type="file" accept="image/*" className="sr-only" onChange={(e) => onUpload(e.target)} />
         </label>
       </div>
+
+      {traced && (
+        <ImageCropper
+          source={traced}
+          title={t('cleanSignatureTitle')}
+          aspect={3}
+          fit="contain"
+          checkerboard
+          outputWidth={1500}
+          onCancel={() => setRaw(null)}
+          onDone={onCleaned}
+          initialFocus={focus}
+        >
+          <label className="block">
+            <span className="flex justify-between text-sm font-bold text-gray-700">
+              <span>{t('inkStrength')}</span>
+              <span className="text-xs font-medium text-gray-500">{t('inkStrengthHint')}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={strength}
+              onChange={(e) => setStrength(Number(e.target.value))}
+              className="mt-2 w-full accent-[#991525]"
+            />
+          </label>
+        </ImageCropper>
+      )}
     </div>
   );
 }

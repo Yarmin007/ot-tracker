@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { InstallApp } from '@/components/InstallApp';
 
 const inputClass =
   "w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] transition-all duration-200 text-gray-900 font-medium";
@@ -26,6 +27,8 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   const [error, setError] = useState<string | null>(callbackError ? t('authError') : null);
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  // Offer "resend confirmation email" when sign-in fails because the email isn't confirmed.
+  const [canResend, setCanResend] = useState(false);
   const signingUp = mode === 'signup';
 
   const handleSignUp = async () => {
@@ -41,6 +44,15 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
     });
     if (error) {
       setError(error.message);
+      setIsLoading(false);
+      return;
+    }
+    // Supabase reports success for an email that already has an account (to
+    // avoid revealing who is registered) but sends no email: the returned user
+    // then has no sign-in identities.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      setError(t('alreadyRegistered'));
+      setMode('signin');
       setIsLoading(false);
       return;
     }
@@ -60,6 +72,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
     setIsLoading(true);
     setError(null);
     setMessage(null);
+    setCanResend(false);
 
     if (signingUp) {
       await handleSignUp();
@@ -69,13 +82,38 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      const code = (error as { code?: string }).code;
+      if (code === 'email_not_confirmed' || /not confirmed/i.test(error.message)) {
+        setError(t('emailNotConfirmed'));
+        setCanResend(true);
+      } else if (code === 'invalid_credentials' || /invalid login credentials/i.test(error.message)) {
+        setError(t('invalidCredentials'));
+      } else {
+        setError(error.message);
+      }
       setIsLoading(false);
     } else {
       // The proxy forwards to onboarding if the profile isn't set up yet.
       router.replace(`/${locale}/dashboard`);
       router.refresh();
     }
+  };
+
+  const resendConfirmation = async () => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/onboarding` },
+    });
+    setIsLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setError(null);
+    setCanResend(false);
+    setMessage(t('confirmationResent'));
   };
 
   const handleGoogleLogin = async () => {
@@ -133,15 +171,19 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
           <div className="p-3 bg-white rounded-full shadow-sm border border-gray-50 mb-4">
             <Logo className="w-20 h-20 drop-shadow-sm" />
           </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 uppercase tracking-wide">
-            {tDash('schoolName')}
-          </h2>
-          <p className="mt-2 text-sm text-gray-500 font-medium">{t('subtitle')}</p>
+          <p className="text-sm font-bold text-gray-500">{tDash('schoolName')}</p>
+          <h1 className="mt-0.5 text-2xl sm:text-3xl font-extrabold text-[#991525] leading-tight">{tDash('appSubtitle')}</h1>
+          <p className="mt-3 text-sm text-gray-500 font-medium">{t('subtitle')}</p>
         </div>
 
         {error && (
           <div role="alert" className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 text-center font-medium">
             {error}
+            {canResend && (
+              <button type="button" onClick={resendConfirmation} disabled={isLoading} className="block mx-auto mt-2 font-bold underline text-red-700 cursor-pointer disabled:opacity-50">
+                {t('resendConfirmation')}
+              </button>
+            )}
           </div>
         )}
         {message && (
@@ -242,6 +284,10 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
           </svg>
           {isGoogleLoading ? t('connectingGoogle') : t('login')}
         </button>
+
+        <div className="mt-6">
+          <InstallApp variant="link" />
+        </div>
 
       </div>
     </div>

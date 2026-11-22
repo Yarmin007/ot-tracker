@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { AppHeader } from '@/components/AppHeader';
 import { ProfileForm } from '@/components/ProfileForm';
+import { ReminderToggle } from '@/components/ReminderToggle';
+import { InstallApp } from '@/components/InstallApp';
 
 export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -22,6 +24,10 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       <main className="max-w-2xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h1 className="text-2xl font-extrabold text-gray-900">{t('title')}</h1>
         <p className="text-gray-500 mt-1 mb-6">{t('subtitle')}</p>
+        <div className="mb-6 space-y-4">
+          <InstallApp variant="card" />
+          <ReminderToggle locale={locale} />
+        </div>
         <ProfileForm locale={locale} initial={profile} mode="settings" />
       </main>
     </div>

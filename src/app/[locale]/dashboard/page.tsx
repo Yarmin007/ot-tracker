@@ -38,6 +38,7 @@ export default async function DashboardPage({
           locale={locale}
           slips={(slips ?? []) as DashboardSlip[]}
           currentPeriodId={getPeriodId(todayInMaldives())}
+          today={todayInMaldives()}
         />
       </main>
     </div>

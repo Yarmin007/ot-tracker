@@ -27,7 +27,8 @@ export async function HistoryList({ locale, slips }: { locale: string; slips: Sl
     return locale === 'dv' ? `${prevYear} ${prev} 16 – ${year} ${cur} 15` : `16 ${prev} ${prevYear} – 15 ${cur} ${year}`;
   };
   /** e.g. "5 ގަޑި 38 މިނެޓް" */
-  const hm = (minutes: number) => durationWords(minutes, tOt('hoursWord'), tOt('minutesWord'));
+  const words = { hours: tOt('hoursWord'), hoursAnd: tOt('hoursAndWord'), minutes: tOt('minutesWord'), zero: tOt('noOvertimeShort') };
+  const hm = (minutes: number) => durationWords(minutes, words);
 
   return (
     <>

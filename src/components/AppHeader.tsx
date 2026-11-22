@@ -62,7 +62,10 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
         <div className="flex justify-between h-16 items-center gap-3">
           <Link href={`/${locale}/dashboard`} className="flex items-center gap-3 min-w-0">
             <Logo className="w-10 h-10 shrink-0" />
-            <span className="line-clamp-2 leading-tight text-sm sm:text-base lg:text-lg font-extrabold text-[#991525]">{t('schoolName')}</span>
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-xs sm:text-sm font-bold text-gray-500">{t('schoolName')}</span>
+              <span className="block truncate text-base sm:text-xl font-extrabold text-[#991525]">{t('appSubtitle')}</span>
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1" aria-label="Main">{nav}</nav>

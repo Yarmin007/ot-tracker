@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DAY_KEYS, durationWords, isFriday, parseDateOnly, shortTime, slipBreakdown } from '@/lib/ot';
+import { DAY_KEYS, baseUsedBefore, durationWords, isFriday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
 import type { SlipActionResult } from '@/app/[locale]/dashboard/actions';
+import { useDurationWords } from '@/components/Duration';
 
 export type EditableSlip = {
   id: string;
@@ -38,14 +39,18 @@ export function SlipForm({
   onDone,
   recentReasons = [],
   defaultTimes,
+  otherSlips = [],
 }: {
   slip?: EditableSlip;
   action: (formData: FormData) => Promise<SlipActionResult>;
   onDone: (periodId: string, warning?: string) => void;
   recentReasons?: string[];
   defaultTimes?: { start: string; end: string };
+  /** All saved entries, so the preview shares the day's 2-hour base with earlier entries. */
+  otherSlips?: (SlipTimes & { id?: string })[];
 }) {
   const t = useTranslations('Overtime');
+  const words = useDurationWords();
   const [date, setDate] = useState(() => slip?.date ?? daysAgo(0));
   const [start, setStart] = useState(shortTime(slip?.start_time) || defaultTimes?.start || '');
   const [end, setEnd] = useState(shortTime(slip?.end_time) || defaultTimes?.end || '');
@@ -60,7 +65,10 @@ export function SlipForm({
   const today = daysAgo(0);
   const yesterday = daysAgo(1);
   const b = start && end && start !== end
-    ? slipBreakdown({ date: validDate ? date : '2000-01-03', start_time: start, end_time: end, is_holiday: holiday })
+    ? slipBreakdown(
+        { date: validDate ? date : '2000-01-03', start_time: start, end_time: end, is_holiday: holiday },
+        validDate ? baseUsedBefore(otherSlips, date, start, slip?.id) : 0,
+      )
     : null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,7 +171,7 @@ export function SlipForm({
                       </span>
                     </span>
                     <span dir="ltr" className="tabular-nums whitespace-nowrap">
-                      {b.ot.start} – {b.ot.end} <span className={holiday ? 'text-amber-700' : 'text-[#991525]'}>({durationWords(b.otMinutes, t('hoursWord'), t('minutesWord'))})</span>
+                      {b.ot.start} – {b.ot.end} <span className={holiday ? 'text-amber-700' : 'text-[#991525]'}>({durationWords(b.otMinutes, words)})</span>
                     </span>
                   </div>
                 ) : (
@@ -240,7 +248,7 @@ export function SlipForm({
           {pending ? t('saving') : (
             <>
               {t('save')}
-              {b && b.otMinutes > 0 && <span className="font-semibold opacity-90">· {durationWords(b.otMinutes, t('hoursWord'), t('minutesWord'))} {t('otShort')}</span>}
+              {b && b.otMinutes > 0 && <span className="font-semibold opacity-90">· {durationWords(b.otMinutes, words)} {t('otShort')}</span>}
             </>
           )}
         </button>
