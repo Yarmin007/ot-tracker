@@ -1,12 +1,22 @@
 "use client";
 
 import { useLocale, useTranslations } from 'next-intl';
-import { use, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { InstallApp } from '@/components/InstallApp';
+
+/** Installed to the iPhone/iPad Home Screen (its cookies are separate from Safari's). */
+function isIosHomeScreenApp() {
+  const nav = navigator as Navigator & { standalone?: boolean };
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  return ios && (nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches);
+}
+
+const toBase64Url = (bytes: Uint8Array) =>
+  btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 const inputClass =
   "w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] transition-all duration-200 text-gray-900 font-medium";
@@ -36,6 +46,71 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   // Offer "resend confirmation email" when sign-in fails because the email isn't confirmed.
   const [canResend, setCanResend] = useState(false);
   const signingUp = mode === 'signup';
+
+  // iPhone Home Screen app: Google sign-in happens in a Safari window and is
+  // handed back here. The secret is made in advance so the window can open
+  // straight from the tap (iOS blocks windows opened after an await).
+  const handoff = useRef<{ secret: string; hash: string } | null>(null);
+  const [waitingForGoogle, setWaitingForGoogle] = useState(false);
+  useEffect(() => {
+    if (!isIosHomeScreenApp() || !crypto.subtle) return;
+    const secret = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret)).then((buf) => {
+      handoff.current = { secret, hash: [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('') };
+    });
+  }, []);
+
+  // Collect the session once the Safari window has finished signing in.
+  useEffect(() => {
+    if (!waitingForGoogle || !handoff.current) return;
+    const { secret } = handoff.current;
+    let stopped = false;
+    const startedAt = Date.now();
+    const check = async () => {
+      if (stopped) return;
+      if (Date.now() - startedAt > 10 * 60 * 1000) {
+        stopped = true;
+        setWaitingForGoogle(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/handoff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret }),
+          cache: 'no-store',
+        });
+        const data = await res.json();
+        if (stopped || data.pending) return;
+        stopped = true;
+        if (!res.ok || !data.access_token) {
+          setWaitingForGoogle(false);
+          setError(t('authError'));
+          return;
+        }
+        const { error } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+        if (error) {
+          setWaitingForGoogle(false);
+          setError(error.message);
+          return;
+        }
+        router.replace(`/${locale}/dashboard`);
+        router.refresh();
+      } catch {
+        /* offline for a moment: try again on the next tick */
+      }
+    };
+    const timer = setInterval(check, 2000);
+    const onVisible = () => document.visibilityState === 'visible' && check();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [waitingForGoogle, supabase, router, locale, t]);
 
   const handleSignUp = async () => {
     if (password.length < 6) {
@@ -123,9 +198,17 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   };
 
   const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
     setError(null);
     setMessage(null);
+
+    if (handoff.current && isIosHomeScreenApp()) {
+      // Must stay synchronous: opens Google sign-in in a Safari window.
+      window.open(`/auth/google?h=${handoff.current.hash}&locale=${locale}`, '_blank');
+      setWaitingForGoogle(true);
+      return;
+    }
+
+    setIsGoogleLoading(true);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -275,6 +358,19 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
             <span className="px-4 bg-white text-gray-500 font-medium">{t('orContinueWith')}</span>
           </div>
         </div>
+
+        {waitingForGoogle && (
+          <div role="status" className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-900 text-center">
+            <p className="font-bold flex items-center justify-center gap-2">
+              <span className="w-4 h-4 rounded-full border-2 border-blue-300 border-t-blue-700 animate-spin" aria-hidden="true" />
+              {t('googleWaiting')}
+            </p>
+            <p className="mt-1 text-blue-800">{t('googleWaitingHint')}</p>
+            <button type="button" onClick={() => setWaitingForGoogle(false)} className="mt-2 font-bold underline cursor-pointer">
+              {t('cancel')}
+            </button>
+          </div>
+        )}
 
         <button
           type="button"

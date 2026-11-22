@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, isHandoffHash } from '@/lib/supabase/admin'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -8,15 +10,20 @@ export async function GET(request: Request) {
   // Only allow same-site relative paths under a known locale (prevents open redirects).
   const next = /^\/(en|dv)(\/[\w\-/]*)?$/.test(nextParam) ? nextParam : '/dv/dashboard'
   const locale = next.split('/')[1]
+  const handoff = searchParams.get('handoff')
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
+    if (!error && isHandoffHash(handoff)) {
+      return finishHandoff(origin, locale, handoff, data.session)
+    }
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
     console.error('Supabase Auth Error:', error.message)
+    if (isHandoffHash(handoff)) return NextResponse.redirect(`${origin}/auth/handoff-done?locale=${locale}`)
   }
 
   // The link only completes sign-in in the browser that requested it. If it was
@@ -27,4 +34,30 @@ export async function GET(request: Request) {
       ? 'ResetLinkElsewhere'
       : 'CouldNotAuthenticate'
   return NextResponse.redirect(`${origin}/${locale}/login?error=${reason}`)
+}
+
+/**
+ * Google sign-in started from the installed iPhone app: park the session for
+ * the app to collect, and don't keep it in this Safari window (two copies of
+ * the same session refreshing separately would get it revoked).
+ */
+async function finishHandoff(
+  origin: string,
+  locale: string,
+  hash: string,
+  session: { access_token: string; refresh_token: string } | null,
+) {
+  const admin = createAdminClient()
+  let ok = false
+  if (admin && session) {
+    await admin.from('auth_handoffs').delete().lt('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
+    const { error } = await admin
+      .from('auth_handoffs')
+      .upsert({ hash, access_token: session.access_token, refresh_token: session.refresh_token })
+    ok = !error
+    if (error) console.error('Handoff store failed:', error.message)
+  }
+  const cookieStore = await cookies()
+  for (const c of cookieStore.getAll()) if (c.name.startsWith('sb-')) cookieStore.delete(c.name)
+  return NextResponse.redirect(`${origin}/auth/handoff-done?locale=${locale}${ok ? '&ok=1' : ''}`)
 }

@@ -35,7 +35,10 @@
     "resendConfirmation": "Resend confirmation email",
     "confirmationResent": "Confirmation email sent. Check your inbox and spam folder.",
     "emailConfirmed": "Your email is confirmed. Please sign in.",
-    "resetLinkElsewhere": "Open the password reset link in the same browser where you asked for it, or request a new one here."
+    "resetLinkElsewhere": "Open the password reset link in the same browser where you asked for it, or request a new one here.",
+    "googleWaiting": "Waiting for Google sign-in…",
+    "googleWaitingHint": "Sign in with Google in the window that opened, tap Done, and you'll be signed in here automatically.",
+    "cancel": "Cancel"
   },
   "Onboarding": {
     "title": "Setup Your Profile",
