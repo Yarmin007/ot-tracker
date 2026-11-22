@@ -76,3 +76,88 @@ export function formatHours(total: number) {
 export function shortTime(t: string | null | undefined) {
   return t ? t.slice(0, 5) : "";
 }
+
+// ---------------------------------------------------------------------------
+// Overtime rules
+//
+// Working days: the first 2 hours of a session complete the official 8 hours
+// ("base" part); only the time after that is overtime, totalled under
+// working days. Example: 13:30-18:00 -> base 13:30-15:30, OT 15:30-18:00 (2h30).
+//
+// Holidays (every Friday, plus weekdays marked as a public holiday): the whole
+// session is overtime, totalled under holidays.
+// ---------------------------------------------------------------------------
+
+export const BASE_MINUTES = 120;
+const FRIDAY = 5;
+
+export type SlipTimes = {
+  date: string;
+  start_time: string;
+  end_time: string;
+  is_holiday?: boolean | null;
+};
+
+export const isFriday = (date: string) => parseDateOnly(date).weekday === FRIDAY;
+
+export const isHolidaySlip = (slip: Pick<SlipTimes, 'date' | 'is_holiday'>) => isFriday(slip.date) || !!slip.is_holiday;
+
+const toMinutes = (t: string) => {
+  const [h, m] = shortTime(t).split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+/** Minutes since midnight -> "HH:MM" (wraps past midnight). */
+export const formatClock = (minutes: number) => {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+
+/** "2:30" style duration, or "" for zero. */
+export const formatDuration = (minutes: number) =>
+  minutes > 0 ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}` : '';
+
+export type Segment = { start: string; end: string; minutes: number };
+
+export type SlipBreakdown = {
+  holiday: boolean;
+  durationMinutes: number;
+  /** First 2 hours on a working day (null on holidays). */
+  base: Segment | null;
+  /** The overtime part (null if the session was 2 hours or less on a working day). */
+  ot: Segment | null;
+  /** Overtime minutes claimed, counted under working days or holidays. */
+  otMinutes: number;
+};
+
+export function slipBreakdown(slip: SlipTimes): SlipBreakdown {
+  const start = toMinutes(slip.start_time);
+  let duration = toMinutes(slip.end_time) - start;
+  if (duration < 0) duration += 1440; // past midnight
+  const holiday = isHolidaySlip(slip);
+  const baseMinutes = holiday ? 0 : Math.min(BASE_MINUTES, duration);
+  const otMinutes = duration - baseMinutes;
+
+  return {
+    holiday,
+    durationMinutes: duration,
+    base: baseMinutes > 0 ? { start: formatClock(start), end: formatClock(start + baseMinutes), minutes: baseMinutes } : null,
+    ot: otMinutes > 0 ? { start: formatClock(start + baseMinutes), end: formatClock(start + duration), minutes: otMinutes } : null,
+    otMinutes,
+  };
+}
+
+/** Overtime totals for a list of slips, split by working days and holidays. */
+export function otTotals(slips: SlipTimes[]) {
+  let working = 0;
+  let holiday = 0;
+  for (const s of slips) {
+    const b = slipBreakdown(s);
+    if (b.holiday) holiday += b.otMinutes;
+    else working += b.otMinutes;
+  }
+  return { working, holiday, total: working + holiday };
+}
+
+/** Split minutes into whole hours and minutes. */
+export const splitMinutes = (minutes: number) => ({ h: Math.floor(minutes / 60), m: minutes % 60 });

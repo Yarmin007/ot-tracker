@@ -1,12 +1,11 @@
-// Positions on the official OT sheet template (public/sheet-template.svg),
-// in PDF points measured from the TOP-LEFT of an A4 landscape page.
-// Measured from the template's own table rectangles. Shared by the on-screen
-// preview (SvgOtSheet) and the PDF export so the two can't drift apart.
+// Where the filled-in values go on the official OT sheet, in PDF points
+// measured from the TOP-LEFT of an A4 landscape page. The static grid and
+// headings are in sheetTemplate.ts; both are drawn by otPdf.ts.
 //
 // Within every hours/minutes pair on this form, MINUTES is the right-hand
 // column and HOURS the left-hand one.
 
-import { DHIVEHI_DAYS, getPeriodRange, parseDateOnly, shortTime, splitHours } from '@/lib/ot';
+import { DHIVEHI_DAYS, getPeriodRange, parseDateOnly, slipBreakdown, splitMinutes } from '@/lib/ot';
 
 export const SHEET_WIDTH = 841.89;
 export const SHEET_HEIGHT = 595.28;
@@ -41,14 +40,35 @@ export const LAYOUT = {
     date: { center: 783.4, maxWidth: 46 },
     day: { center: 739.1, maxWidth: 38 },
     reason: { right: 714, maxWidth: 154 },
-    otStartMinutes: 345.2,
-    otStartHours: 324.4,
-    otEndMinutes: 266.5,
-    otEndHours: 245.6,
-    totalWorkingMinutes: 188.2,
-    totalWorkingHours: 166.9,
   },
 } as const;
+
+/**
+ * Centre x of every hours/minutes cell (signature columns are left blank).
+ * Groups, right to left on the form:
+ *  - first 2 hours to complete the official 8 hours: start, end
+ *  - total of those 2 hours
+ *  - overtime after the official 8 hours: start, end
+ *  - overtime total: working days, holidays
+ */
+export const NUMBER_COLUMNS = {
+  baseStartMinutes: 545.4,
+  baseStartHours: 521.5,
+  baseEndMinutes: 465.2,
+  baseEndHours: 444.2,
+  baseTotalMinutes: 387.3,
+  baseTotalHours: 366.1,
+  otStartMinutes: 345.2,
+  otStartHours: 324.4,
+  otEndMinutes: 266.5,
+  otEndHours: 245.6,
+  workingTotalMinutes: 188.2,
+  workingTotalHours: 166.9,
+  holidayTotalMinutes: 146.1,
+  holidayTotalHours: 125.0,
+} as const;
+
+export type NumberCell = keyof typeof NUMBER_COLUMNS;
 
 export const DHIVEHI_MONTHS = [
   'ޖެނުއަރީ', 'ފެބްރުއަރީ', 'މާރޗް', 'އޭޕްރީލް', 'މެއި', 'ޖޫން',
@@ -60,8 +80,9 @@ export type SheetSlip = {
   date: string;
   start_time: string;
   end_time: string;
-  total_hours: number | string;
+  total_hours?: number | string;
   reason: string | null;
+  is_holiday?: boolean | null;
 };
 
 export type SheetProfile = {
@@ -71,21 +92,38 @@ export type SheetProfile = {
   basic_salary?: number | string | null;
 } | null;
 
-/** Text for each cell of one table row. */
+const hm = (clock: string) => clock.split(':') as [string, string];
+
+/** Text for each cell of one table row, following the overtime rules in lib/ot.ts. */
 export function rowCells(slip: SheetSlip) {
-  const [startH = '', startM = ''] = shortTime(slip.start_time).split(':');
-  const [endH = '', endM = ''] = shortTime(slip.end_time).split(':');
-  const total = splitHours(slip.total_hours);
+  const b = slipBreakdown(slip);
+  const numbers: Partial<Record<NumberCell, string>> = {};
+
+  if (b.base) {
+    [numbers.baseStartHours, numbers.baseStartMinutes] = hm(b.base.start);
+    [numbers.baseEndHours, numbers.baseEndMinutes] = hm(b.base.end);
+    const t = splitMinutes(b.base.minutes);
+    numbers.baseTotalHours = String(t.h);
+    numbers.baseTotalMinutes = String(t.m).padStart(2, '0');
+  }
+  if (b.ot) {
+    [numbers.otStartHours, numbers.otStartMinutes] = hm(b.ot.start);
+    [numbers.otEndHours, numbers.otEndMinutes] = hm(b.ot.end);
+    const t = splitMinutes(b.otMinutes);
+    if (b.holiday) {
+      numbers.holidayTotalHours = String(t.h);
+      numbers.holidayTotalMinutes = String(t.m).padStart(2, '0');
+    } else {
+      numbers.workingTotalHours = String(t.h);
+      numbers.workingTotalMinutes = String(t.m).padStart(2, '0');
+    }
+  }
+
   return {
     date: slip.date,
     day: DHIVEHI_DAYS[parseDateOnly(slip.date).weekday] ?? '',
     reason: slip.reason ?? '',
-    otStartHours: startH,
-    otStartMinutes: startM,
-    otEndHours: endH,
-    otEndMinutes: endM,
-    totalWorkingHours: String(total.h),
-    totalWorkingMinutes: String(total.m).padStart(2, '0'),
+    numbers,
   };
 }
 

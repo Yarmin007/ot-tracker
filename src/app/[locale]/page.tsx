@@ -10,7 +10,8 @@ export default async function IndexPage({
   const supabase = await createClient();
 
   // Verify if a session exists
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub;
 
   if (user) {
     // If authenticated, send directly to dashboard

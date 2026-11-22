@@ -20,15 +20,16 @@ export async function GET(request: NextRequest) {
 async function buildExport(request: NextRequest) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub as string | undefined;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const period = request.nextUrl.searchParams.get('period');
   const periodId = isValidPeriodId(period) ? period : null;
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
   if (!profile) {
     return NextResponse.json({ error: 'Profile not found. Please complete onboarding first.' }, { status: 404 });
   }
@@ -36,7 +37,7 @@ async function buildExport(request: NextRequest) {
   let query = supabase
     .from('overtime_slips')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('date', { ascending: true })
     .order('start_time', { ascending: true });
 
@@ -58,7 +59,8 @@ async function buildExport(request: NextRequest) {
   return new NextResponse(Buffer.from(pdf), {
     status: 200,
     headers: {
-      'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(baseName)}`,
+      // ?inline=1 opens the PDF in the browser's viewer (Sheet Preview); otherwise download.
+      'Content-Disposition': `${request.nextUrl.searchParams.get('inline') === '1' ? 'inline' : 'attachment'}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(baseName)}`,
       'Content-Type': 'application/pdf',
       'Cache-Control': 'no-store',
     },

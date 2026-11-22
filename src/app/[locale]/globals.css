@@ -18,27 +18,12 @@
   --font-sheet: var(--font-noto-thaana), var(--font-inter), Arial, sans-serif;
 }
 
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-/* Printing is driven by print: variants on the dashboard; this sets up the page itself. */
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 0;
-  }
-  html,
-  body {
-    overflow: visible !important;
-    height: auto !important;
-  }
-  .sheet-page {
-    break-after: page;
-    break-inside: avoid;
-  }
-  .sheet-page:last-child {
-    break-after: auto;
-  }
 }

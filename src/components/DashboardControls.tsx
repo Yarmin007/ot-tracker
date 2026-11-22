@@ -1,43 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 
-/** Pay-period dropdown: navigates to the chosen period. */
+/** Pay-period dropdown (switches instantly; all slips are already loaded). */
 export function PeriodSelect({
-  locale,
   periods,
   value,
   label,
+  onChange,
 }: {
-  locale: string;
   periods: { id: string; label: string }[];
   value: string;
   label: string;
+  onChange: (periodId: string) => void;
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  // Show the chosen period right away instead of snapping back while the page loads.
-  const [selected, setSelected] = useState(value);
-  const [prevValue, setPrevValue] = useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setSelected(value);
-  }
-
   return (
-    <div className={`relative min-w-[200px] ${isPending ? 'opacity-60' : ''}`} aria-busy={isPending}>
+    <div className="relative min-w-[200px]">
       <select
         aria-label={label}
         disabled={periods.length === 0}
-        className="appearance-none cursor-pointer bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-xl focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] block w-full ps-4 pe-10 py-3 font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-        value={selected}
-        onChange={(e) => {
-          const next = e.target.value;
-          setSelected(next);
-          startTransition(() => router.push(`/${locale}/dashboard?period=${next}`));
-        }}
+        className="appearance-none cursor-pointer bg-gray-50 border border-gray-200 text-gray-900 text-sm sm:text-base rounded-xl focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] block w-full ps-3 sm:ps-4 pe-9 py-3 font-bold shadow-sm truncate disabled:cursor-not-allowed disabled:opacity-60"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
       >
         {periods.length === 0 && <option value="">—</option>}
         {periods.map((p) => (
@@ -51,66 +36,54 @@ export function PeriodSelect({
   );
 }
 
-export function PrintButton({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={() => window.print()}
-      className="bg-[#991525] hover:bg-[#7a111e] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
-    >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-      {label}
-    </button>
-  );
-}
-
 /**
  * Modal overlay that closes on Escape or a click on the backdrop,
  * locks page scroll while open, and moves focus into the dialog.
  */
 export function ModalShell({
-  closeHref,
+  onClose,
   title,
   children,
   className = '',
   zIndex = 'z-[100]',
-  printable = false,
+  sheet = false,
 }: {
-  closeHref: string;
+  onClose: () => void;
   title: string;
   children: React.ReactNode;
   className?: string;
   zIndex?: string;
-  /** When printing, drop the overlay chrome so the content flows across pages. */
-  printable?: boolean;
+  /** Slide up from the bottom on phones (centred dialog from the sm breakpoint). */
+  sheet?: boolean;
 }) {
-  const router = useRouter();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
-    const close = () => router.replace(closeHref, { scroll: false });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Focus the first form field, or the dialog itself.
-    const firstField = dialogRef.current?.querySelector<HTMLElement>('input:not([type=hidden]), textarea, select');
+    const firstField = dialogRef.current?.querySelector<HTMLElement>('input:not([type=hidden]):not([disabled]), textarea, select');
     (firstField ?? dialogRef.current)?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [router, closeHref]);
+  }, []);
 
   return (
     <div
-      className={`fixed inset-0 bg-gray-900/50 backdrop-blur-sm ${zIndex} flex items-center justify-center p-4 ${
-        printable ? 'print:static print:block print:bg-transparent print:backdrop-blur-none print:p-0' : 'print:hidden'
-      }`}
+      className={`fixed inset-0 bg-gray-900/50 backdrop-blur-sm ${zIndex} flex justify-center ${
+        sheet ? 'items-end sm:items-center sm:p-4' : 'items-center p-4'
+      } print:hidden`}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) router.replace(closeHref, { scroll: false });
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
@@ -119,9 +92,9 @@ export function ModalShell({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`bg-white rounded-2xl shadow-xl w-full relative border border-gray-100 outline-none ${className} ${
-          printable ? 'print:max-h-none print:max-w-none print:overflow-visible print:shadow-none print:border-0 print:rounded-none' : ''
-        }`}
+        className={`bg-white shadow-xl w-full relative border border-gray-100 outline-none ${
+          sheet ? 'rounded-t-3xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-[sheet-up_.22s_ease-out] sm:animate-none' : 'rounded-2xl'
+        } ${className}`}
       >
         {children}
       </div>

@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const locales = ['en', 'dv'] as const;
+const ONBOARDED_COOKIE = 'ot_onboarded';
 
 const handleI18nRouting = createMiddleware({
   locales,
@@ -30,7 +31,10 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getClaims verifies the JWT (locally with asymmetric signing keys) and refreshes
+  // an expired session; much cheaper than getUser(), which always calls Supabase Auth.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = (claimsData?.claims?.sub as string | undefined) ?? null;
 
   const { pathname } = request.nextUrl;
   const firstSegment = pathname.split('/')[1];
@@ -48,7 +52,7 @@ export async function proxy(request: NextRequest) {
 
   const isPublic = rest.startsWith('/login');
 
-  if (!user) {
+  if (!userId) {
     if (!isPublic && !rest.startsWith('/reset-password')) return redirectTo('/login');
     return response;
   }
@@ -56,13 +60,19 @@ export async function proxy(request: NextRequest) {
   // Signed-in users don't need the login page.
   if (isPublic) return redirectTo('/dashboard');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_onboarded')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const onboarded = !!profile?.is_onboarded;
+  // Remember a completed onboarding in a cookie so we don't query the profile on every request.
+  let onboarded = request.cookies.get(ONBOARDED_COOKIE)?.value === userId;
+  if (!onboarded) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_onboarded')
+      .eq('id', userId)
+      .maybeSingle();
+    onboarded = !!profile?.is_onboarded;
+    if (onboarded) {
+      response.cookies.set(ONBOARDED_COOKIE, userId, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
+    }
+  }
   const onOnboarding = rest.startsWith('/onboarding');
 
   if (!onboarded && !onOnboarding && !rest.startsWith('/reset-password')) return redirectTo('/onboarding');
