@@ -161,3 +161,14 @@ export function otTotals(slips: SlipTimes[]) {
 
 /** Split minutes into whole hours and minutes. */
 export const splitMinutes = (minutes: number) => ({ h: Math.floor(minutes / 60), m: minutes % 60 });
+
+/**
+ * Duration in words, e.g. "5 ގަޑި 38 މިނެޓް" / "5 h 38 min".
+ * Whole hours drop the minutes ("2 ގަޑި"); under an hour drops the hours ("30 މިނެޓް").
+ */
+export function durationWords(minutes: number, hoursWord: string, minutesWord: string) {
+  const { h, m } = splitMinutes(Math.max(0, Math.round(minutes)));
+  if (h && m) return `${h} ${hoursWord} ${m} ${minutesWord}`;
+  if (h) return `${h} ${hoursWord}`;
+  return `${m} ${minutesWord}`;
+}

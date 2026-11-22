@@ -17,7 +17,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
+    <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
       <AppHeader locale={locale} active="settings" />
       <main className="max-w-2xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h1 className="text-2xl font-extrabold text-gray-900">{t('title')}</h1>

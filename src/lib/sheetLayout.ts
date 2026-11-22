@@ -1,6 +1,6 @@
 // Where the filled-in values go on the official OT sheet, in PDF points
 // measured from the TOP-LEFT of an A4 landscape page. The static grid and
-// headings are in sheetTemplate.ts; both are drawn by otPdf.ts.
+// headings are in sheetTemplate.ts; both are drawn by sheetRender.ts.
 //
 // Within every hours/minutes pair on this form, MINUTES is the right-hand
 // column and HOURS the left-hand one.

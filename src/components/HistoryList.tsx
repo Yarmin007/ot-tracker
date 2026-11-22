@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { MONTH_KEYS, getPeriodId, getPeriodRange, otTotals, splitMinutes, type SlipTimes } from '@/lib/ot';
+import { MONTH_KEYS, durationWords, getPeriodId, getPeriodRange, otTotals, type SlipTimes } from '@/lib/ot';
 import { ROWS_PER_PAGE } from '@/lib/sheetLayout';
 
 const todayInMaldives = () =>
@@ -26,11 +26,8 @@ export async function HistoryList({ locale, slips }: { locale: string; slips: Sl
     if (prevYear === year) return locale === 'dv' ? `${prev} 16 – ${cur} 15، ${year}` : `16 ${prev} – 15 ${cur} ${year}`;
     return locale === 'dv' ? `${prevYear} ${prev} 16 – ${year} ${cur} 15` : `16 ${prev} ${prevYear} – 15 ${cur} ${year}`;
   };
-  /** "2:30" (hours:minutes), as on the dashboard cards. */
-  const hm = (minutes: number) => {
-    const { h, m } = splitMinutes(minutes);
-    return `${h}:${String(m).padStart(2, '0')}`;
-  };
+  /** e.g. "5 ގަޑި 38 މިނެޓް" */
+  const hm = (minutes: number) => durationWords(minutes, tOt('hoursWord'), tOt('minutesWord'));
 
   return (
     <>
@@ -61,16 +58,14 @@ export async function HistoryList({ locale, slips }: { locale: string; slips: Sl
                       {t('slips', { count: periodSlips.length })} · {t('pages', { count: pages })}
                     </p>
                     <p className="text-sm mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                      <span className="text-gray-600">{tOt('workingDaysTotal')}: <b className="text-gray-900" dir="ltr">{hm(totals.working)}</b></span>
-                      <span className="text-gray-600">{tOt('holidaysTotal')}: <b className="text-gray-900" dir="ltr">{hm(totals.holiday)}</b></span>
+                      <span className="text-gray-600">{tOt('workingDaysTotal')}: <b className="text-gray-900">{hm(totals.working)}</b></span>
+                      <span className="text-gray-600">{tOt('holidaysTotal')}: <b className="text-amber-800">{hm(totals.holiday)}</b></span>
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:flex gap-2 shrink-0">
                   <a
-                    href={`/api/export?period=${periodId}&inline=1`}
-                    target="_blank"
-                    rel="noopener"
+                    href={`/${locale}/sheet?period=${periodId}`}
                     className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm font-bold hover:bg-gray-50"
                   >
                     {t('view')}

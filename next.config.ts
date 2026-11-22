@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   // The PDF export reads these at runtime; make sure they ship with the serverless function.
   outputFileTracingIncludes: {
     '/api/export': ['./src/app/fonts/MVWaheed.otf', './src/app/fonts/Faruma.ttf'],
+    '/*/sheet': ['./src/app/fonts/MVWaheed.otf', './src/app/fonts/Faruma.ttf'],
   },
 };
 

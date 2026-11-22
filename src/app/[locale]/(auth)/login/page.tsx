@@ -121,7 +121,7 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   const busy = isLoading || isGoogleLoading;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 via-[#991525]/5 to-gray-100 px-4 py-20 relative">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-app via-app to-[#f6e9eb] px-4 py-20 relative">
 
       <div className="absolute top-6 end-6">
         <LanguageSwitcher />

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { SignaturePad } from '@/components/SignaturePad';
+import { AvatarPicker } from '@/components/AvatarPicker';
 import { saveProfile } from '@/app/[locale]/settings/actions';
 
 export type ProfileValues = {
@@ -12,6 +13,7 @@ export type ProfileValues = {
   record_card_no?: string | null;
   basic_salary?: number | string | null;
   signature?: string | null;
+  avatar_url?: string | null;
 };
 
 const inputClass =
@@ -60,6 +62,11 @@ export function ProfileForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 font-medium">{error}</div>}
 
+      <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
+        <h2 className="text-base font-extrabold text-gray-900 mb-3">{ts('photo')}</h2>
+        <AvatarPicker name="avatar" initial={initial?.avatar_url} displayName={initial?.full_name} />
+      </section>
+
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6 space-y-4">
         <div>
           <label htmlFor="fullName" className={labelClass}>{t('fullName')}</label>
@@ -88,7 +95,7 @@ export function ProfileForm({
         <SignaturePad name="signature" initial={initial?.signature} />
       </section>
 
-      <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-[#F8FAFC]/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:bg-transparent pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-app/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:bg-transparent pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {notice && <p role="status" className="mb-2 text-sm font-semibold text-green-700">{notice}</p>}
         <button
           type="submit"

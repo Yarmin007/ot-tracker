@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DAY_KEYS, formatDuration, isFriday, parseDateOnly, shortTime, slipBreakdown } from '@/lib/ot';
+import { DAY_KEYS, durationWords, isFriday, parseDateOnly, shortTime, slipBreakdown } from '@/lib/ot';
 import type { SlipActionResult } from '@/app/[locale]/dashboard/actions';
 
 export type EditableSlip = {
@@ -163,7 +163,7 @@ export function SlipForm({
                       </span>
                     </span>
                     <span dir="ltr" className="tabular-nums whitespace-nowrap">
-                      {b.ot.start} – {b.ot.end} <span className={holiday ? 'text-amber-700' : 'text-[#991525]'}>({formatDuration(b.otMinutes)})</span>
+                      {b.ot.start} – {b.ot.end} <span className={holiday ? 'text-amber-700' : 'text-[#991525]'}>({durationWords(b.otMinutes, t('hoursWord'), t('minutesWord'))})</span>
                     </span>
                   </div>
                 ) : (
@@ -240,7 +240,7 @@ export function SlipForm({
           {pending ? t('saving') : (
             <>
               {t('save')}
-              {b && b.otMinutes > 0 && <span className="font-semibold opacity-90" dir="ltr">· {formatDuration(b.otMinutes)} {t('otShort')}</span>}
+              {b && b.otMinutes > 0 && <span className="font-semibold opacity-90">· {durationWords(b.otMinutes, t('hoursWord'), t('minutesWord'))} {t('otShort')}</span>}
             </>
           )}
         </button>

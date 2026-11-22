@@ -7,7 +7,7 @@ import { Logo } from '@/components/Logo';
  */
 export default function Loading() {
   return (
-    <div className="fixed inset-0 z-[200] bg-[#F8FAFC]/80 backdrop-blur-[2px] flex items-center justify-center animate-[fade-in-late_.6s_ease-out_both]" role="status" aria-live="polite">
+    <div className="fixed inset-0 z-[200] bg-app/80 backdrop-blur-[2px] flex items-center justify-center animate-[fade-in-late_.6s_ease-out_both]" role="status" aria-live="polite">
       <div className="absolute top-0 inset-x-0 h-1 overflow-hidden bg-[#991525]/10">
         <div className="h-full w-1/3 bg-[#991525] rounded-full animate-[loading-bar_1.1s_ease-in-out_infinite]" />
       </div>

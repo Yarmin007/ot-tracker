@@ -23,10 +23,14 @@ export async function saveProfile(formData: FormData): Promise<ProfileResult> {
   const cardNo = String(formData.get('cardNo') ?? '').trim();
   const salary = parseFloat(String(formData.get('salary') ?? ''));
   const signature = String(formData.get('signature') ?? '');
+  const avatar = String(formData.get('avatar') ?? '');
 
   if (!fullName || !designation || !cardNo || !Number.isFinite(salary) || salary < 0) {
     return { ok: false, error: 'required' };
   }
+  // Profile picture: a small JPEG/PNG data URL from the picker (or an existing https URL).
+  const avatarOk = !avatar || avatar.startsWith('https://') || (/^data:image\/(jpeg|png);base64,/.test(avatar) && avatar.length <= MAX_SIGNATURE_LENGTH);
+  if (!avatarOk) return { ok: false, error: 'Invalid profile picture.' };
   if (signature && (!signature.startsWith('data:image/png;base64,') || signature.length > MAX_SIGNATURE_LENGTH)) {
     return { ok: false, error: 'Invalid signature image.' };
   }
@@ -37,6 +41,7 @@ export async function saveProfile(formData: FormData): Promise<ProfileResult> {
     record_card_no: cardNo,
     basic_salary: salary,
     signature: signature || null,
+    avatar_url: avatar || null,
     is_onboarded: true,
   };
 

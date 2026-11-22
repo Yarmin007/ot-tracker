@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getPeriodRange, isValidPeriodId } from '@/lib/ot';
-import { buildOtSheetPdf } from '@/lib/otPdf';
+import { buildOtSheetPdf } from '@/lib/sheetRender';
 
 export async function GET(request: NextRequest) {
   try {

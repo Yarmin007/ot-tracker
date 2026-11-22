@@ -1,7 +1,7 @@
 // The static parts of the official OT sheet (A4 landscape, PDF points from the
 // TOP-LEFT), rebuilt as vector lines and real text instead of a traced image.
 // Geometry was measured from the original Illustrator template. Headings are
-// set in MV Waheed; filled-in values use Faruma (see sheetLayout.ts / otPdf.ts).
+// set in MV Waheed; filled-in values use Faruma (see sheetLayout.ts / sheetRender.ts).
 
 export type Rect = { x0: number; x1: number; y0: number; y1: number };
 export type HeaderCell = Rect & { text: string; size?: number };
@@ -76,9 +76,9 @@ export const STATIC_TEXTS: StaticText[] = [
   { text: 'ލ. ގަން', x: 807.4, y: 75.0, size: 7.44, align: 'right' },
   // Form title
   { text: 'މުވައްޒަފުން އިތުރުގަޑީގައި ކުރާ މަސައްކަތުގެ ރެކޯޑް ފޯމް', x: 418.9, y: 94.2, size: 11.16, align: 'center' },
-  // "16 ____ from 15 ____ to" (month names are filled in)
+  // "16 ____ އިން 15 ____ އަށް" (from ... to; month names are filled in)
   { text: '16', x: 518, y: 116.8, size: 8.68, align: 'center' },
-  { text: 'މިން', x: 439, y: 116.8, size: 8.68, align: 'right' },
+  { text: 'އިން', x: 439, y: 116.8, size: 8.68, align: 'right' },
   { text: '15', x: 408, y: 116.8, size: 8.68, align: 'center' },
   { text: 'އަށް', x: 325.5, y: 116.8, size: 8.68, align: 'right' },
   // Employee details labels (values go just to their left)

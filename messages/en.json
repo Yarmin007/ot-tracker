@@ -140,7 +140,9 @@
     "slipsCount": "{count, plural, =0 {No slips} one {# slip} other {# slips}}",
     "dayType": "Day type",
     "workingDay": "Working day",
-    "reasonPlaceholder": "e.g. Preparing exam papers"
+    "reasonPlaceholder": "e.g. Preparing exam papers",
+    "hoursWord": "h",
+    "minutesWord": "min"
   },
   "History": {
     "title": "Sheet history",
@@ -165,6 +167,19 @@
     "signHere": "Sign here",
     "noSignature": "No signature saved yet.",
     "signatureNotSaved": "Details saved, but the signature could not be stored yet (database update pending).",
-    "required": "Please fill in all fields."
+    "required": "Please fill in all fields.",
+    "photo": "Profile picture",
+    "addPhoto": "Add photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove"
+  },
+  "Viewer": {
+    "back": "Back",
+    "title": "OT sheet",
+    "print": "Print",
+    "download": "Download PDF",
+    "zoom": "Zoom in",
+    "fit": "Fit to screen",
+    "page": "Page {n} of {total}"
   }
 }

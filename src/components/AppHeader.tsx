@@ -3,11 +3,21 @@ import { getTranslations } from 'next-intl/server';
 import { Logo } from '@/components/Logo';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { signOut } from '@/app/[locale]/dashboard/actions';
+import { Avatar } from '@/components/Avatar';
+import { createClient } from '@/lib/supabase/server';
 
 type Section = 'dashboard' | 'history' | 'settings';
 
 export async function AppHeader({ locale, active }: { locale: string; active: Section }) {
   const t = await getTranslations({ locale, namespace: 'Dashboard' });
+
+  // Profile picture for the header (links to Settings).
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub as string | undefined;
+  const { data: me } = userId
+    ? await supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).maybeSingle()
+    : { data: null };
 
   const tabs: { key: Section; href: string; label: string; icon: React.ReactNode }[] = [
     {
@@ -59,6 +69,9 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <LanguageSwitcher />
+            <Link href={`/${locale}/settings`} title={t('navSettings')} aria-label={t('navSettings')} className="shrink-0">
+              <Avatar src={me?.avatar_url} name={me?.full_name} className="w-9 h-9 text-xs" />
+            </Link>
             <form action={signOut}>
               <input type="hidden" name="locale" value={locale} />
               <button

@@ -19,7 +19,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ locale
     .order('date', { ascending: false });
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
+    <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
       <AppHeader locale={locale} active="history" />
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <HistoryList locale={locale} slips={(data ?? []) as SlipTimes[]} />

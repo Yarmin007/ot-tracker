@@ -17,8 +17,8 @@ import {
   parseDateOnly,
   slipBreakdown,
   splitMinutes,
-  formatDuration,
 } from '@/lib/ot';
+import { Duration } from '@/components/Duration';
 
 export type DashboardSlip = {
   id: string;
@@ -120,16 +120,6 @@ export function DashboardClient({
 
   const th = "border-b border-e border-gray-200";
   const td = "border-e border-gray-100 px-1 py-3";
-  const fmtTotal = (minutes: number, compact = false) => {
-    const { h, m } = splitMinutes(minutes);
-    const unit = compact ? 'text-xs text-gray-400 font-semibold' : 'text-lg text-gray-400 font-semibold';
-    return (
-      <>
-        {h}<span className={unit}> {t('h')}</span>
-        {m > 0 && <> {m}<span className={unit}> {t('m')}</span></>}
-      </>
-    );
-  };
   const cell = (value: string, className = '') => (
     <td className={`${td} ${value ? className : 'text-gray-300'}`}>{value || '-'}</td>
   );
@@ -170,16 +160,16 @@ export function DashboardClient({
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-10">
             <div>
               <p className="text-gray-500 text-sm font-semibold mb-1 whitespace-nowrap">{t('claimedHours')}</p>
-              <p className="text-4xl font-extrabold text-[#991525] leading-none whitespace-nowrap">{fmtTotal(totals.total)}</p>
+              <p className="text-5xl font-extrabold text-[#991525] leading-none"><Duration minutes={totals.total} unitClass="text-3xl" /></p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
                 <p className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">{t('workingDaysTotal')}</p>
-                <p className="text-base font-bold text-gray-900 whitespace-nowrap">{fmtTotal(totals.working, true)}</p>
+                <p className="text-xl font-extrabold text-gray-900"><Duration minutes={totals.working} unitClass="text-base" /></p>
               </div>
               <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
                 <p className="text-[11px] font-semibold text-amber-700 whitespace-nowrap">{t('holidaysTotal')}</p>
-                <p className="text-base font-bold text-gray-900 whitespace-nowrap">{fmtTotal(totals.holiday, true)}</p>
+                <p className="text-xl font-extrabold text-amber-800"><Duration minutes={totals.holiday} unitClass="text-base" /></p>
               </div>
             </div>
           </div>
@@ -196,9 +186,7 @@ export function DashboardClient({
             </button>
             {activeSlips.length > 0 ? (
               <a
-                href={`/api/export?period=${activePeriodId}&inline=1`}
-                target="_blank"
-                rel="noopener"
+                href={`/${locale}/sheet?period=${activePeriodId}`}
                 className="flex items-center justify-center bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm sm:text-base font-bold hover:bg-gray-50 transition-colors shadow-sm"
               >
                 {t('sheetPreview')}
@@ -257,8 +245,8 @@ export function DashboardClient({
                       <p className="text-gray-900 font-semibold leading-snug mt-0.5 line-clamp-2">{slip.reason}</p>
                     </div>
                     <div className="shrink-0 text-end">
-                      <div className={`text-lg font-extrabold ${b.otMinutes ? (b.holiday ? 'text-amber-700' : 'text-[#991525]') : 'text-gray-300'}`} dir="ltr">
-                        {b.otMinutes ? formatDuration(b.otMinutes) : '0:00'}
+                      <div className={`text-lg font-extrabold ${b.otMinutes ? (b.holiday ? 'text-amber-700' : 'text-[#991525]') : 'text-gray-300'}`}>
+                        <Duration minutes={b.otMinutes} unitClass="text-sm" />
                       </div>
                       <div className="text-[11px] font-semibold text-gray-500">{t('otShort')}</div>
                     </div>
@@ -288,7 +276,7 @@ export function DashboardClient({
       </section>
 
       {/* Phone: Add button pinned to the bottom of the screen */}
-      <div className="print:hidden xl:hidden fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="print:hidden xl:hidden fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-app via-app/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           onClick={() => setParams({ modal: 'add', editId: null })}

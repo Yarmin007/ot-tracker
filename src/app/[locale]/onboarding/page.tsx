@@ -18,7 +18,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
+    <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <div className="flex items-center justify-between mb-6">
           <Logo className="w-14 h-14" />

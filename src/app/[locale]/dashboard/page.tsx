@@ -31,7 +31,7 @@ export default async function DashboardPage({
     .order('start_time', { ascending: false });
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
+    <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
       <AppHeader locale={locale} active="dashboard" />
       <main className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <DashboardClient

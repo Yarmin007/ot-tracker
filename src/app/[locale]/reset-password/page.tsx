@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-app px-4">
       <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
         <div className="flex flex-col items-center mb-6">
           <Logo className="w-16 h-16 mb-4" />
