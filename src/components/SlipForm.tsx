@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DAY_KEYS, baseUsedBefore, durationWords, isFriday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
+import { DAY_KEYS, baseUsedBefore, durationWords, findOverlap, isFriday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
 import type { SlipActionResult } from '@/app/[locale]/dashboard/actions';
 import { useDurationWords } from '@/components/Duration';
 
@@ -71,6 +71,13 @@ export function SlipForm({
       )
     : null;
 
+  // Warn straight away if this overlaps another entry (the server checks too).
+  const clash =
+    validDate && start && end && start !== end
+      ? findOverlap(otherSlips, { date, start_time: start, end_time: end }, slip?.id)
+      : undefined;
+  const overlapText = (c: { date: string; start: string; end: string }) => t('overlap', c);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -78,11 +85,20 @@ export function SlipForm({
       setError(t('invalidTimes'));
       return;
     }
+    if (clash) {
+      setError(overlapText({ date: clash.date, start: shortTime(clash.start_time), end: shortTime(clash.end_time) }));
+      return;
+    }
     setPending(true);
     const result = await action(new FormData(e.currentTarget));
     setPending(false);
     if (!result.ok) {
-      setError(result.error === 'sameTimes' ? t('invalidTimes') : result.error === 'invalid' ? t('invalidForm') : result.error);
+      setError(
+        result.error === 'sameTimes' ? t('invalidTimes')
+        : result.error === 'invalid' ? t('invalidForm')
+        : result.error === 'overlap' && result.overlap ? overlapText(result.overlap)
+        : result.error,
+      );
       return;
     }
     onDone(result.periodId, result.holidayNotSaved ? t('holidayNotSaved') : undefined);
@@ -146,6 +162,12 @@ export function SlipForm({
                 className={`${inputBase} px-2 py-3 text-xl font-bold text-center tabular-nums`} />
             </div>
           </div>
+
+          {clash && (
+            <p role="alert" className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 font-medium">
+              {overlapText({ date: clash.date, start: shortTime(clash.start_time), end: shortTime(clash.end_time) })}
+            </p>
+          )}
 
           {/* Live breakdown */}
           {b && (

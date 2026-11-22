@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import Script from 'next/script';
-import { INSTALL_PROMPT_SCRIPT } from '@/lib/installPrompt';
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from 'next-intl';
@@ -73,7 +72,7 @@ export default async function RootLayout({
     >
       <body className={`${fontClass} antialiased`}>
         {/* Catch Android/Chrome's install prompt even if it fires before React loads. */}
-        <Script id="install-prompt" strategy="beforeInteractive">{INSTALL_PROMPT_SCRIPT}</Script>
+        <Script src="/install-prompt.js" strategy="beforeInteractive" />
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

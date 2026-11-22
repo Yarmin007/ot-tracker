@@ -3,11 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getPeriodId, isFriday, slipBreakdown } from '@/lib/ot';
+import { findOverlap, getPeriodId, isFriday, shortTime, slipBreakdown } from '@/lib/ot';
 
 export type SlipActionResult =
   | { ok: true; periodId: string; holidayNotSaved?: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string; overlap?: { date: string; start: string; end: string } };
 
 /** Verified user id from the session JWT (no extra Auth round trip with asymmetric keys). */
 async function currentUserId() {
@@ -46,6 +46,30 @@ function readSlipForm(formData: FormData) {
 const missingHolidayColumn = (error: { code?: string; message?: string } | null) =>
   !!error && (error.code === 'PGRST204' || error.code === '42703') && /is_holiday/.test(error.message ?? '');
 
+/** Neighbouring days are included so past-midnight entries are checked too. */
+async function overlapError(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  row: { date: string; start_time: string; end_time: string },
+  excludeId?: string,
+): Promise<SlipActionResult | null> {
+  const shift = (days: number) => {
+    const d = new Date(`${row.date}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+  const { data } = await supabase
+    .from('overtime_slips')
+    .select('id, date, start_time, end_time')
+    .eq('user_id', userId)
+    .gte('date', shift(-1))
+    .lte('date', shift(1));
+  const clash = findOverlap(data ?? [], row, excludeId);
+  return clash
+    ? { ok: false, error: 'overlap', overlap: { date: clash.date, start: shortTime(clash.start_time), end: shortTime(clash.end_time) } }
+    : null;
+}
+
 function done(date: string, holidayNotSaved: boolean): SlipActionResult {
   revalidatePath('/[locale]/dashboard', 'page');
   return { ok: true, periodId: getPeriodId(date), holidayNotSaved };
@@ -56,6 +80,9 @@ export async function createSlip(formData: FormData): Promise<SlipActionResult> 
   if (!userId) redirect('/');
   const parsed = readSlipForm(formData);
   if ('error' in parsed) return { ok: false, error: parsed.error! };
+
+  const clash = await overlapError(supabase, userId, parsed.row);
+  if (clash) return clash;
 
   const row = { ...parsed.row, user_id: userId, status: 'Pending' };
   let { error } = await supabase.from('overtime_slips').insert(row);
@@ -78,6 +105,9 @@ export async function updateSlip(formData: FormData): Promise<SlipActionResult> 
   if ('error' in parsed) return { ok: false, error: parsed.error! };
 
   const row = parsed.row;
+  const clash = await overlapError(supabase, userId, row, slipId);
+  if (clash) return clash;
+
   const update = (values: Record<string, unknown>) =>
     supabase.from('overtime_slips').update(values).eq('id', slipId).eq('user_id', userId);
 
@@ -101,7 +131,7 @@ export async function deleteSlip(formData: FormData) {
 }
 
 export async function signOut(formData: FormData) {
-  const locale = formData.get('locale') === 'dv' ? 'dv' : 'en';
+  const locale = formData.get('locale') === 'en' ? 'en' : 'dv';
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect(`/${locale}/login`);

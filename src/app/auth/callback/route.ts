@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const nextParam = searchParams.get('next') ?? ''
   // Only allow same-site relative paths under a known locale (prevents open redirects).
-  const next = /^\/(en|dv)(\/[\w\-/]*)?$/.test(nextParam) ? nextParam : '/en/dashboard'
+  const next = /^\/(en|dv)(\/[\w\-/]*)?$/.test(nextParam) ? nextParam : '/dv/dashboard'
   const locale = next.split('/')[1]
 
   if (code) {
@@ -19,5 +19,12 @@ export async function GET(request: Request) {
     console.error('Supabase Auth Error:', error.message)
   }
 
-  return NextResponse.redirect(`${origin}/${locale}/login?error=CouldNotAuthenticate`)
+  // The link only completes sign-in in the browser that requested it. If it was
+  // opened elsewhere (e.g. email read on the phone), say what actually happened.
+  const reason = next.includes('/onboarding')
+    ? 'EmailConfirmed' // Supabase confirmed the address before redirecting here
+    : next.includes('/reset-password')
+      ? 'ResetLinkElsewhere'
+      : 'CouldNotAuthenticate'
+  return NextResponse.redirect(`${origin}/${locale}/login?error=${reason}`)
 }

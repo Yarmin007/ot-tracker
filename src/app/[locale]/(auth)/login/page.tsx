@@ -24,8 +24,14 @@ export default function LoginPage({ searchParams }: { searchParams: Promise<{ er
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   // Errors passed back from the OAuth callback arrive as ?error=...
-  const [error, setError] = useState<string | null>(callbackError ? t('authError') : null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    callbackError === 'EmailConfirmed' ? null
+    : callbackError === 'ResetLinkElsewhere' ? t('resetLinkElsewhere')
+    : callbackError ? t('authError')
+    : null,
+  );
+  // A confirmation link opened in another browser still confirms the email.
+  const [message, setMessage] = useState<string | null>(callbackError === 'EmailConfirmed' ? t('emailConfirmed') : null);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   // Offer "resend confirmation email" when sign-in fails because the email isn't confirmed.
   const [canResend, setCanResend] = useState(false);

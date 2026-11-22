@@ -33,7 +33,9 @@
     "invalidCredentials": "Wrong email or password. If you usually sign in with Google, use the Google button, or tap 'Forgot password?' to set a password.",
     "emailNotConfirmed": "Please confirm your email first. We can send the confirmation email again.",
     "resendConfirmation": "Resend confirmation email",
-    "confirmationResent": "Confirmation email sent. Check your inbox and spam folder."
+    "confirmationResent": "Confirmation email sent. Check your inbox and spam folder.",
+    "emailConfirmed": "Your email is confirmed. Please sign in.",
+    "resetLinkElsewhere": "Open the password reset link in the same browser where you asked for it, or request a new one here."
   },
   "Onboarding": {
     "title": "Setup Your Profile",
@@ -153,7 +155,8 @@
     "noOvertimeShort": "No overtime",
     "deleteTitle": "Delete this entry?",
     "deleteHint": "This can't be undone.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "overlap": "This overlaps your entry on {date} ({start}–{end}). Change the times so the same hours aren't counted twice."
   },
   "History": {
     "title": "Sheet history",
@@ -212,7 +215,8 @@
     "testButton": "Send a test notification",
     "testSending": "Sending…",
     "testSent": "Sent! It should appear in a few seconds.",
-    "testNotRegistered": "This device isn't registered. Turn the reminder off and on again."
+    "testNotRegistered": "This device isn't registered. Turn the reminder off and on again.",
+    "notConfigured": "Reminders aren't switched on for this site yet. Please ask the app admin."
   },
   "Install": {
     "title": "Install the app",

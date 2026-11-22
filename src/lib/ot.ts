@@ -184,6 +184,30 @@ export function baseUsedBefore(slips: SlipTimes[], date: string, startTime: stri
   return Math.min(used, BASE_MINUTES);
 }
 
+/** [start, end) of an entry in minutes on a continuous timeline (handles past-midnight). */
+function absoluteInterval(s: SlipTimes) {
+  const { year, month, day } = parseDateOnly(s.date);
+  const dayStart = (Date.UTC(year, month, day) / 60000) | 0;
+  const start = dayStart + toMinutes(s.start_time);
+  let duration = toMinutes(s.end_time) - toMinutes(s.start_time);
+  if (duration < 0) duration += 1440;
+  return [start, start + duration] as const;
+}
+
+/**
+ * The first existing entry whose time overlaps `candidate` (touching end-to-start
+ * is fine), or undefined. Overlapping entries would count the same time twice.
+ */
+export function findOverlap<T extends SlipTimes & { id?: string }>(slips: T[], candidate: SlipTimes, excludeId?: string): T | undefined {
+  const [a0, a1] = absoluteInterval(candidate);
+  if (a1 <= a0) return undefined;
+  return slips.find((s) => {
+    if (excludeId && s.id === excludeId) return false;
+    const [b0, b1] = absoluteInterval(s);
+    return a0 < b1 && b0 < a1;
+  });
+}
+
 /** Overtime totals for a list of slips, split by working days and holidays. */
 export function otTotals(slips: SlipTimes[]) {
   let working = 0;

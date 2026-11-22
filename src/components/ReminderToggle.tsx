@@ -13,7 +13,7 @@ function urlBase64ToUint8Array(base64: string) {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-type State = 'loading' | 'unsupported' | 'needs-install' | 'blocked' | 'off' | 'on';
+type State = 'loading' | 'unsupported' | 'not-configured' | 'needs-install' | 'blocked' | 'off' | 'on';
 
 /** Settings switch for the monthly "submit your OT sheet" notification (15th of each month). */
 export function ReminderToggle({ locale }: { locale: string }) {
@@ -25,7 +25,12 @@ export function ReminderToggle({ locale }: { locale: string }) {
 
   useEffect(() => {
     (async () => {
-      const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!VAPID_PUBLIC_KEY;
+      // The site itself isn't set up for push (key missing from the deployment).
+      if (!VAPID_PUBLIC_KEY) {
+        setState('not-configured');
+        return;
+      }
+      const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
       if (!supported) {
         // iPhone/iPad only allow web notifications once the app is added to the Home Screen.
         const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -111,6 +116,7 @@ export function ReminderToggle({ locale }: { locale: string }) {
     state === 'needs-install' ? t('needsInstall')
     : state === 'blocked' ? t('blocked')
     : state === 'unsupported' ? t('unsupported')
+    : state === 'not-configured' ? t('notConfigured')
     : t('hint');
 
   return (

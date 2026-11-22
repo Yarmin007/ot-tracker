@@ -7,7 +7,10 @@ const ONBOARDED_COOKIE = 'ot_onboarded';
 
 const handleI18nRouting = createMiddleware({
   locales,
-  defaultLocale: 'en',
+  // Dhivehi first: the bare address always opens in Dhivehi (not the phone's
+  // browser language, which is usually English). English stays one tap away.
+  defaultLocale: 'dv',
+  localeDetection: false,
   localePrefix: 'always'
 });
 
