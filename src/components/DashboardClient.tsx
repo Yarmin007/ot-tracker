@@ -1,6 +1,7 @@
 "use client";
 
 import { InstallApp } from '@/components/InstallApp';
+import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -227,14 +228,13 @@ export function DashboardClient({
               </span>
             )}
             {activeSlips.length > 0 ? (
-              <a
-                href={`/api/export?period=${activePeriodId}`}
-                download
+              <PdfDownloadButton
+                periodId={activePeriodId}
                 className="flex items-center justify-center bg-[#991525] text-white px-4 py-3 rounded-xl text-sm sm:text-base font-bold hover:bg-[#7a111e] transition-colors shadow-sm gap-2 whitespace-nowrap"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 {t('export')}
-              </a>
+              </PdfDownloadButton>
             ) : (
               <span aria-disabled="true" className="flex items-center justify-center bg-gray-100 text-gray-400 px-4 py-3 rounded-xl text-sm sm:text-base font-bold cursor-not-allowed">
                 {t('export')}

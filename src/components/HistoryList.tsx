@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { MONTH_KEYS, durationWords, getPeriodId, getPeriodRange, otTotals, type SlipTimes } from '@/lib/ot';
 import { ROWS_PER_PAGE } from '@/lib/sheetLayout';
+import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 
 const todayInMaldives = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Indian/Maldives', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -71,14 +72,13 @@ export async function HistoryList({ locale, slips }: { locale: string; slips: Sl
                   >
                     {t('view')}
                   </a>
-                  <a
-                    href={`/api/export?period=${periodId}`}
-                    download
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#991525] text-white text-sm font-bold hover:bg-[#7a111e] whitespace-nowrap"
+                  <PdfDownloadButton
+                periodId={periodId}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#991525] text-white text-sm font-bold hover:bg-[#7a111e] whitespace-nowrap"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     {t('download')}
-                  </a>
+                  </PdfDownloadButton>
                 </div>
               </li>
             );

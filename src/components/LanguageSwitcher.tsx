@@ -22,7 +22,7 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-sm" role="group" aria-label="Language">
+    <div className="flex items-center gap-1 bg-gray-100 p-0.5 sm:p-1 rounded-lg border border-gray-200 shadow-sm" role="group" aria-label="Language">
       {LOCALES.map(({ code, label }) => (
         <button
           key={code}
@@ -30,7 +30,7 @@ export function LanguageSwitcher() {
           lang={code}
           aria-pressed={locale === code}
           onClick={() => switchLocale(code)}
-          className={`px-3 py-2 sm:py-1.5 text-xs font-extrabold rounded-md transition-all duration-200 cursor-pointer ${
+          className={`px-2.5 sm:px-3 py-2 sm:py-1.5 text-xs font-extrabold rounded-md transition-all duration-200 cursor-pointer ${
             locale === code
               ? 'hidden sm:block bg-[#991525] text-white shadow-md'
               : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200'

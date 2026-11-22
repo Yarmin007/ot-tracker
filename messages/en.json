@@ -248,5 +248,14 @@
     "done": "Open Hamad OT from your home screen",
     "doneHint": "Look for the school crest icon.",
     "gotIt": "Got it"
+  },
+  "Pdf": {
+    "preparing": "Preparing…",
+    "failed": "Couldn't create the PDF. Check your connection and try again.",
+    "failedTitle": "Download failed",
+    "ok": "OK",
+    "readyTitle": "PDF is ready",
+    "saveShare": "Save or share PDF",
+    "cancel": "Cancel"
   }
 }

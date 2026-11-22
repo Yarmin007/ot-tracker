@@ -28,7 +28,7 @@ function Inner({ label, pendingLabel, variant }: { label: string; pendingLabel: 
       disabled={pending}
       title={label}
       aria-label={label}
-      className="flex items-center gap-2 h-10 px-2.5 rounded-xl border border-red-100 bg-red-50/60 text-red-700 text-sm font-bold hover:bg-red-100 transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-70"
+      className="flex items-center gap-2 h-9 sm:h-10 px-2 sm:px-2.5 rounded-xl border border-red-100 bg-red-50/60 text-red-700 text-sm font-bold hover:bg-red-100 transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? spinner : icon}
       <span className="hidden lg:inline">{pending ? pendingLabel : label}</span>

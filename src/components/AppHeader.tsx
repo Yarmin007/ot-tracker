@@ -60,8 +60,8 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
     <header className="print:hidden bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
       <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center gap-3">
-          <Link href={`/${locale}/dashboard`} className="flex items-center gap-3 min-w-0">
-            <Logo className="w-10 h-10 shrink-0" />
+          <Link href={`/${locale}/dashboard`} className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Logo className="w-9 h-9 sm:w-10 sm:h-10 shrink-0" />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-xs sm:text-sm font-bold text-gray-500">{t('schoolName')}</span>
               <span className="block truncate text-[15px] sm:text-xl font-extrabold text-[#991525]">{t('appSubtitle')}</span>
@@ -70,10 +70,10 @@ export async function AppHeader({ locale, active }: { locale: string; active: Se
 
           <nav className="hidden md:flex items-center gap-1" aria-label="Main">{nav}</nav>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <LanguageSwitcher />
-            <Link href={`/${locale}/settings`} title={t('navSettings')} aria-label={t('navSettings')} className="shrink-0 hidden sm:block">
-              <Avatar src={me?.avatar_url} name={me?.full_name} className="w-9 h-9 text-xs" />
+            <Link href={`/${locale}/settings`} title={t('navSettings')} aria-label={t('navSettings')} className="shrink-0">
+              <Avatar src={me?.avatar_url} name={me?.full_name} className="w-8 h-8 sm:w-9 sm:h-9 text-xs" />
             </Link>
             <SignOutButton locale={locale} label={t('signOut')} pendingLabel={t('signingOut')} />
           </div>
