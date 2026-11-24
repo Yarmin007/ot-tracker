@@ -12,8 +12,21 @@ const trashPath =
 /**
  * Trash button for one entry. Asks for confirmation, deletes, and says so if
  * the delete didn't go through (e.g. no internet) instead of failing silently.
+ * With onRemovingChange the list hides the entry as soon as the delete is
+ * confirmed (no waiting for the server). If it then fails, the list shows the
+ * entry again and the failure message (this button is gone by then).
  */
-export function DeleteSlipButton({ slipId, label, details }: { slipId: string; label: string; details?: string }) {
+export function DeleteSlipButton({
+  slipId,
+  label,
+  details,
+  onRemovingChange,
+}: {
+  slipId: string;
+  label: string;
+  details?: string;
+  onRemovingChange?: (slipId: string, removing: boolean) => void;
+}) {
   const t = useTranslations('Overtime');
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -21,12 +34,17 @@ export function DeleteSlipButton({ slipId, label, details }: { slipId: string; l
 
   const confirm = () => {
     setOpen(false);
+    onRemovingChange?.(slipId, true);
     startTransition(async () => {
+      let ok = false;
       try {
-        const result = await deleteSlip(slipId);
-        setFailed(!result.ok);
+        ok = (await deleteSlip(slipId)).ok;
       } catch {
-        setFailed(true); // offline / server unreachable
+        ok = false; // offline / server unreachable
+      }
+      if (!ok) {
+        if (onRemovingChange) onRemovingChange(slipId, false);
+        else setFailed(true);
       }
     });
   };
@@ -69,18 +87,23 @@ export function DeleteSlipButton({ slipId, label, details }: { slipId: string; l
           document.body,
         )}
 
-      {failed &&
-        createPortal(
-          <ModalShell sheet onClose={() => setFailed(false)} title={t('deleteFailed')} className="sm:max-w-sm">
-            <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
-              <p className="text-base font-bold text-gray-900">{t('deleteFailed')}</p>
-              <button type="button" onClick={() => setFailed(false)} className="mt-5 w-full py-3 rounded-xl bg-[#991525] text-white text-sm font-bold cursor-pointer">
-                {t('close')}
-              </button>
-            </div>
-          </ModalShell>,
-          document.body,
-        )}
+      {failed && <DeleteFailedModal onClose={() => setFailed(false)} />}
     </>
+  );
+}
+
+/** "Couldn't delete the entry" message. */
+export function DeleteFailedModal({ onClose }: { onClose: () => void }) {
+  const t = useTranslations('Overtime');
+  return createPortal(
+    <ModalShell sheet onClose={onClose} title={t('deleteFailed')} className="sm:max-w-sm">
+      <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
+        <p className="text-base font-bold text-gray-900">{t('deleteFailed')}</p>
+        <button type="button" onClick={onClose} className="mt-5 w-full py-3 rounded-xl bg-[#991525] text-white text-sm font-bold cursor-pointer">
+          {t('close')}
+        </button>
+      </div>
+    </ModalShell>,
+    document.body,
   );
 }

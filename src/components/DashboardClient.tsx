@@ -5,7 +5,7 @@ import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DeleteSlipButton } from '@/components/DeleteSubmitButton';
+import { DeleteFailedModal, DeleteSlipButton } from '@/components/DeleteSubmitButton';
 import { ModalShell, PeriodSelect } from '@/components/DashboardControls';
 import { SlipForm } from '@/components/SlipForm';
 import { createSlip, updateSlip } from '@/app/[locale]/dashboard/actions';
@@ -48,7 +48,7 @@ const durationParts = (minutes: number) => {
 
 export function DashboardClient({
   locale,
-  slips,
+  slips: serverSlips,
   currentPeriodId,
   today,
 }: {
@@ -63,6 +63,23 @@ export function DashboardClient({
   const isSubmissionDay = !!today && today.endsWith('-15');
   const searchParams = useSearchParams();
   const [notice, setNotice] = useState<string | null>(null);
+  // Entries being deleted disappear straight away instead of after the server's
+  // round trip; one whose delete fails comes back (see DeleteSlipButton).
+  const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
+  const [deleteFailed, setDeleteFailed] = useState(false);
+  const markRemoving = (id: string, on: boolean) => {
+    if (!on) setDeleteFailed(true); // only called back when the delete failed
+    setRemoving((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+  const slips = useMemo(
+    () => (removing.size ? serverSlips.filter((s) => !removing.has(s.id)) : serverSlips),
+    [serverSlips, removing],
+  );
 
   // UI state lives in the URL but is changed with the History API: no server round trip.
   // Reads the live URL (not the render's searchParams) so it is right even
@@ -173,6 +190,8 @@ export function DashboardClient({
       <div className="sm:hidden">
         <InstallApp variant="banner" />
       </div>
+
+      {deleteFailed && <DeleteFailedModal onClose={() => setDeleteFailed(false)} />}
 
       {notice && (
         <div role="status" className="print:hidden mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 font-medium flex justify-between gap-4">
@@ -310,7 +329,7 @@ export function DashboardClient({
                         className="w-10 h-10 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 flex items-center justify-center cursor-pointer">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
-                      <div className="w-10 h-10 flex items-center justify-center"><DeleteSlipButton slipId={slip.id} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} /></div>
+                      <div className="w-10 h-10 flex items-center justify-center"><DeleteSlipButton slipId={slip.id} onRemovingChange={markRemoving} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} /></div>
                     </div>
                   </div>
                 </li>
@@ -423,7 +442,7 @@ export function DashboardClient({
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <DeleteSlipButton slipId={slip.id} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
+                          <DeleteSlipButton slipId={slip.id} onRemovingChange={markRemoving} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
                         </div>
                       </td>
                     </tr>
