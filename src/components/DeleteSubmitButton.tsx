@@ -1,30 +1,39 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { ModalShell } from '@/components/DashboardControls';
+import { deleteSlip } from '@/app/[locale]/dashboard/actions';
+
+const trashPath =
+  'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
 
 /**
- * Trash button for a delete <form>. Opens a styled confirmation dialog and
- * submits the surrounding form only when the user confirms.
+ * Trash button for one entry. Asks for confirmation, deletes, and says so if
+ * the delete didn't go through (e.g. no internet) instead of failing silently.
  */
-export function DeleteSubmitButton({ label, details }: { label: string; details?: string }) {
+export function DeleteSlipButton({ slipId, label, details }: { slipId: string; label: string; details?: string }) {
   const t = useTranslations('Overtime');
-  const { pending } = useFormStatus();
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const confirm = () => {
     setOpen(false);
-    buttonRef.current?.form?.requestSubmit();
+    startTransition(async () => {
+      try {
+        const result = await deleteSlip(slipId);
+        setFailed(!result.ok);
+      } catch {
+        setFailed(true); // offline / server unreachable
+      }
+    });
   };
 
   return (
     <>
       <button
-        ref={buttonRef}
         type="button"
         disabled={pending}
         onClick={() => setOpen(true)}
@@ -33,7 +42,7 @@ export function DeleteSubmitButton({ label, details }: { label: string; details?
         aria-label={label}
       >
         <svg className={`w-5 h-5 ${pending ? 'animate-pulse' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={trashPath} />
         </svg>
       </button>
 
@@ -42,7 +51,7 @@ export function DeleteSubmitButton({ label, details }: { label: string; details?
           <ModalShell sheet onClose={() => setOpen(false)} title={t('deleteTitle')} className="sm:max-w-sm">
             <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
               <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={trashPath} /></svg>
               </div>
               <h3 className="text-lg font-extrabold text-gray-900">{t('deleteTitle')}</h3>
               {details && <p className="mt-2 text-sm font-semibold text-gray-700" dir="auto">{details}</p>}
@@ -55,6 +64,19 @@ export function DeleteSubmitButton({ label, details }: { label: string; details?
                   {label}
                 </button>
               </div>
+            </div>
+          </ModalShell>,
+          document.body,
+        )}
+
+      {failed &&
+        createPortal(
+          <ModalShell sheet onClose={() => setFailed(false)} title={t('deleteFailed')} className="sm:max-w-sm">
+            <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center">
+              <p className="text-base font-bold text-gray-900">{t('deleteFailed')}</p>
+              <button type="button" onClick={() => setFailed(false)} className="mt-5 w-full py-3 rounded-xl bg-[#991525] text-white text-sm font-bold cursor-pointer">
+                {t('close')}
+              </button>
             </div>
           </ModalShell>,
           document.body,

@@ -1,6 +1,6 @@
 // Keeps Android/Chrome's install prompt even if it fires before the app has loaded.
 // Read by src/components/InstallApp.tsx (event name must match PROMPT_EVENT in src/lib/installPrompt.ts).
-window.__installPrompt = null;
+window.__installPrompt = window.__installPrompt || null;
 window.addEventListener('beforeinstallprompt', function (e) {
   e.preventDefault();
   window.__installPrompt = e;

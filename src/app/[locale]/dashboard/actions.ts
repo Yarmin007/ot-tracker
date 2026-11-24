@@ -122,12 +122,14 @@ export async function updateSlip(formData: FormData): Promise<SlipActionResult> 
   return done(row.date, holidayNotSaved);
 }
 
-export async function deleteSlip(formData: FormData) {
+export async function deleteSlip(slipId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const { supabase, userId } = await currentUserId();
-  const slipId = String(formData.get('slipId') || '');
-  if (!userId || !slipId) return;
-  await supabase.from('overtime_slips').delete().eq('id', slipId).eq('user_id', userId);
+  if (!userId) return { ok: false, error: 'unauthorized' };
+  if (!slipId) return { ok: false, error: 'invalid' };
+  const { error } = await supabase.from('overtime_slips').delete().eq('id', slipId).eq('user_id', userId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath('/[locale]/dashboard', 'page');
+  return { ok: true };
 }
 
 export async function signOut(formData: FormData) {

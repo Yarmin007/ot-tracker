@@ -86,12 +86,19 @@ export function shortTime(t: string | null | undefined) {
 // 13:30-14:30 (1h base) + 17:30-18:30 (1h base) + 20:00-22:00 (2h OT).
 // A single entry 13:30-18:00 -> base 13:30-15:30, OT 15:30-18:00 (2h30).
 //
-// Holidays (every Friday, plus weekdays marked as a public holiday): the whole
+// Saturdays work the same way, but the base is 6 hours: overtime only starts
+// once that Saturday's entries pass 6 hours (still totalled under working
+// days). A Saturday that doesn't pass 6 hours has no overtime and is left off
+// the sheet (see sheetSlips).
+//
+// Holidays (every Friday, plus days marked as a public holiday): the whole
 // session is overtime, totalled under holidays.
 // ---------------------------------------------------------------------------
 
 export const BASE_MINUTES = 120;
+export const SATURDAY_BASE_MINUTES = 360;
 const FRIDAY = 5;
+const SATURDAY = 6;
 
 export type SlipTimes = {
   date: string;
@@ -101,6 +108,11 @@ export type SlipTimes = {
 };
 
 export const isFriday = (date: string) => parseDateOnly(date).weekday === FRIDAY;
+
+export const isSaturday = (date: string) => parseDateOnly(date).weekday === SATURDAY;
+
+/** Minutes of a day's work that are not overtime: 6 hours on Saturday, 2 hours otherwise. */
+export const baseMinutesFor = (date: string) => (isSaturday(date) ? SATURDAY_BASE_MINUTES : BASE_MINUTES);
 
 export const isHolidaySlip = (slip: Pick<SlipTimes, 'date' | 'is_holiday'>) => isFriday(slip.date) || !!slip.is_holiday;
 
@@ -124,9 +136,9 @@ export type Segment = { start: string; end: string; minutes: number };
 export type SlipBreakdown = {
   holiday: boolean;
   durationMinutes: number;
-  /** First 2 hours on a working day (null on holidays). */
+  /** First 2 hours on a working day, first 6 on a Saturday (null on holidays). */
   base: Segment | null;
-  /** The overtime part (null if the session was 2 hours or less on a working day). */
+  /** The overtime part (null if the day's base hours aren't used up yet). */
   ot: Segment | null;
   /** Overtime minutes claimed, counted under working days or holidays. */
   otMinutes: number;
@@ -134,7 +146,7 @@ export type SlipBreakdown = {
 
 /**
  * Split one entry into its base part and overtime part.
- * `baseUsedBefore` is how much of the day's 2-hour base was already used by
+ * `baseUsedBefore` is how much of the day's base (2h, or 6h on Saturday) was already used by
  * that day's earlier entries (see breakdownAll).
  */
 export function slipBreakdown(slip: SlipTimes, baseUsedBefore = 0): SlipBreakdown {
@@ -142,7 +154,7 @@ export function slipBreakdown(slip: SlipTimes, baseUsedBefore = 0): SlipBreakdow
   let duration = toMinutes(slip.end_time) - start;
   if (duration < 0) duration += 1440; // past midnight
   const holiday = isHolidaySlip(slip);
-  const baseLeft = Math.max(0, BASE_MINUTES - baseUsedBefore);
+  const baseLeft = Math.max(0, baseMinutesFor(slip.date) - baseUsedBefore);
   const baseMinutes = holiday ? 0 : Math.min(baseLeft, duration);
   const otMinutes = duration - baseMinutes;
 
@@ -158,7 +170,7 @@ export function slipBreakdown(slip: SlipTimes, baseUsedBefore = 0): SlipBreakdow
 const startMinutes = (s: SlipTimes) => toMinutes(s.start_time);
 
 /**
- * Breakdowns for a set of entries, sharing each day's 2-hour base across that
+ * Breakdowns for a set of entries, sharing each day's base hours across that
  * day's entries in start-time order. Pass ALL entries of a day together.
  */
 export function breakdownAll<T extends SlipTimes>(slips: T[]): Map<T, SlipBreakdown> {
@@ -181,7 +193,18 @@ export function baseUsedBefore(slips: SlipTimes[], date: string, startTime: stri
   const map = breakdownAll(earlier);
   let used = 0;
   for (const b of map.values()) used += b.base?.minutes ?? 0;
-  return Math.min(used, BASE_MINUTES);
+  return Math.min(used, baseMinutesFor(date));
+}
+
+/**
+ * The entries that go on the printed sheet. A Saturday whose entries don't pass
+ * 6 hours has no overtime, so that whole day is left off; once it passes 6 hours
+ * all of that day's entries are listed (they show how the 6 hours were made up).
+ */
+export function sheetSlips<T extends SlipTimes>(slips: T[], breakdowns = breakdownAll(slips)): T[] {
+  const saturdaysWithOt = new Set<string>();
+  for (const [slip, b] of breakdowns) if (isSaturday(slip.date) && b.otMinutes > 0) saturdaysWithOt.add(slip.date);
+  return slips.filter((s) => !isSaturday(s.date) || saturdaysWithOt.has(s.date));
 }
 
 /** [start, end) of an entry in minutes on a continuous timeline (handles past-midnight). */

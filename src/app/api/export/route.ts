@@ -50,7 +50,9 @@ async function buildExport(request: NextRequest) {
   const { data: slips, error } = await query;
   if (error) throw new Error(`Could not load slips: ${error.message}`);
 
-  const pdf = await buildOtSheetPdf({ profile, slips: slips ?? [], periodId });
+  // English app users get the English form; everyone else the Dhivehi one.
+  const lang = request.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'dv';
+  const pdf = await buildOtSheetPdf({ profile, slips: slips ?? [], periodId, lang });
 
   // HTTP headers must be ASCII: provide an ASCII fallback plus an RFC 5987 UTF-8 filename.
   const baseName = `OT_Sheet_${String(profile.full_name || 'export').trim().replace(/\s+/g, '_')}${periodId ? `_${periodId}` : ''}.pdf`;

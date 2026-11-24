@@ -64,7 +64,10 @@
     "navHistory": "History",
     "navSettings": "Settings",
     "appSubtitle": "OT Record Sheet",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirmHint": "You'll need to sign in again to use the app.",
+    "cancel": "Cancel"
   },
   "Overtime": {
     "addTitle": "Add Overtime",
@@ -133,9 +136,11 @@
     "publicHolidayHint": "Tick this for a government holiday on a weekday. All hours then count as overtime.",
     "fridayHoliday": "Friday is a holiday: all hours count as overtime.",
     "holidayBadge": "Holiday",
-    "firstTwoHours": "First 2 hours",
+    "notOnSheet": "Not on sheet",
+    "firstBaseHours": "First {hours} hours",
     "overtimePart": "Overtime",
     "noOvertimeYet": "No overtime: the first 2 hours complete the official 8 hours.",
+    "noOvertimeSaturday": "No overtime: on Saturday, overtime starts after 6 hours. This day won't go on the sheet.",
     "workingDaysTotal": "Working days",
     "holidaysTotal": "Holidays",
     "holidayNotSaved": "Saved, but the public-holiday flag could not be stored yet (database update pending).",
@@ -160,7 +165,8 @@
     "deleteTitle": "Delete this entry?",
     "deleteHint": "This can't be undone.",
     "cancel": "Cancel",
-    "overlap": "This overlaps your entry on {date} ({start}–{end}). Change the times so the same hours aren't counted twice."
+    "overlap": "This overlaps your entry on {date} ({start}–{end}). Change the times so the same hours aren't counted twice.",
+    "deleteFailed": "Couldn't delete the entry. Check your internet connection and try again."
   },
   "History": {
     "title": "Sheet history",
@@ -257,5 +263,32 @@
     "readyTitle": "PDF is ready",
     "saveShare": "Save or share PDF",
     "cancel": "Cancel"
+  },
+  "Account": {
+    "title": "Sign-in & security",
+    "signedInAs": "Signed in as",
+    "methodPassword": "Email and password",
+    "methodGoogle": "Google",
+    "connected": "On",
+    "notConnected": "Not set up",
+    "connectGoogle": "Connect Google",
+    "connecting": "Opening Google…",
+    "connectGoogleHint": "Then you can also sign in with Google, into this same account.",
+    "googleLinked": "Google is connected. You can now sign in with either method.",
+    "googleTaken": "That Google account is already used by a different account in this app. Sign in with Google and check which entries are there, or ask the admin to merge the two accounts.",
+    "linkingDisabled": "Connecting Google is turned off for this app. Ask the admin to enable \"manual linking\" in Supabase.",
+    "linkFailed": "Couldn't connect Google. Please try again.",
+    "changePassword": "Change password",
+    "setPassword": "Set a password",
+    "setPasswordHint": "Lets you sign in with your email and this password too, into this same account.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordTooShort": "Use at least 6 characters.",
+    "passwordsMismatch": "The passwords don't match.",
+    "samePassword": "That is already your password.",
+    "reauthNeeded": "For security, sign out and sign in again, then change the password.",
+    "passwordSaved": "Password saved.",
+    "passwordAlreadySet": "Your password is already set. You can sign in with your email and that password.",
+    "saving": "Saving…"
   }
 }

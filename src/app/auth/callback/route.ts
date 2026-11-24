@@ -11,6 +11,13 @@ export async function GET(request: Request) {
   const next = /^\/(en|dv)(\/[\w\-/]*)?$/.test(nextParam) ? nextParam : '/dv/dashboard'
   const locale = next.split('/')[1]
   const handoff = searchParams.get('handoff')
+  // "Connect Google" in Settings comes back here too: report the outcome there
+  // (the login page would just bounce a signed-in user to the dashboard).
+  const toSettings = /^\/(en|dv)\/settings$/.test(next)
+  const oauthError = searchParams.get('error_description') || searchParams.get('error')
+  if (toSettings && oauthError) {
+    return NextResponse.redirect(`${origin}${next}?link=error&msg=${encodeURIComponent(oauthError.slice(0, 200))}`)
+  }
 
   if (code) {
     const supabase = await createClient()
@@ -20,7 +27,10 @@ export async function GET(request: Request) {
       return finishHandoff(origin, locale, handoff, data.session)
     }
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}${next}${toSettings ? '?link=ok' : ''}`)
+    }
+    if (toSettings) {
+      return NextResponse.redirect(`${origin}${next}?link=error&msg=${encodeURIComponent(error.message.slice(0, 200))}`)
     }
     console.error('Supabase Auth Error:', error.message)
     if (isHandoffHash(handoff)) return NextResponse.redirect(`${origin}/auth/handoff-done?locale=${locale}`)

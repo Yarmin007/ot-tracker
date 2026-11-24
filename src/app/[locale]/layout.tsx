@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from 'next/script';
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from 'next-intl';
@@ -70,9 +69,13 @@ export default async function RootLayout({
       className={`${inter.variable} ${mvWaheed.variable} ${faruma.variable} ${notoThaana.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Catch Android/Chrome's install prompt even if it fires before React loads.
+            A plain async script: React 19 hoists and de-dupes it, whereas
+            next/script's beforeInteractive triggers a "script tag" console error. */}
+        <script async src="/install-prompt.js" />
+      </head>
       <body className={`${fontClass} antialiased`}>
-        {/* Catch Android/Chrome's install prompt even if it fires before React loads. */}
-        <Script src="/install-prompt.js" strategy="beforeInteractive" />
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

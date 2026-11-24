@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
-import { MONTH_KEYS, durationWords, getPeriodId, getPeriodRange, otTotals, type SlipTimes } from '@/lib/ot';
+import { MONTH_KEYS, durationWords, getPeriodId, getPeriodRange, otTotals, sheetSlips, type SlipTimes } from '@/lib/ot';
 import { ROWS_PER_PAGE } from '@/lib/sheetLayout';
+import { EN_ROWS_PER_PAGE } from '@/lib/sheetEnglishLayout';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 
 const todayInMaldives = () =>
@@ -42,7 +43,7 @@ export async function HistoryList({ locale, slips }: { locale: string; slips: Sl
         <ul className="space-y-3">
           {periods.map(([periodId, periodSlips]) => {
             const totals = otTotals(periodSlips);
-            const pages = Math.max(1, Math.ceil(periodSlips.length / ROWS_PER_PAGE));
+            const pages = Math.max(1, Math.ceil(sheetSlips(periodSlips).length / (locale === 'en' ? EN_ROWS_PER_PAGE : ROWS_PER_PAGE)));
             return (
               <li key={periodId} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-start gap-3 flex-1 min-w-0">

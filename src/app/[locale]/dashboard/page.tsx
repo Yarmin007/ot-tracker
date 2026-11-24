@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { AppHeader } from '@/components/AppHeader';
 import { DashboardClient, type DashboardSlip } from '@/components/DashboardClient';
 import { getPeriodId } from '@/lib/ot';
+import { fetchAllSlips } from '@/lib/slips';
 
 /** Today's date in the Maldives, as YYYY-MM-DD. */
 const todayInMaldives = () =>
@@ -23,12 +24,7 @@ export default async function DashboardPage({
 
   // One query for all slips; switching periods and the add/edit windows are
   // handled in the browser, so they need no further round trips.
-  const { data: slips } = await supabase
-    .from('overtime_slips')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false })
-    .order('start_time', { ascending: false });
+  const slips = await fetchAllSlips<DashboardSlip>(supabase, userId);
 
   return (
     <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
@@ -36,7 +32,7 @@ export default async function DashboardPage({
       <main className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <DashboardClient
           locale={locale}
-          slips={(slips ?? []) as DashboardSlip[]}
+          slips={slips}
           currentPeriodId={getPeriodId(todayInMaldives())}
           today={todayInMaldives()}
         />

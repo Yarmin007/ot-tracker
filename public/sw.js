@@ -28,13 +28,15 @@ self.addEventListener('notificationclick', (event) => {
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
-      for (const w of windows) {
-        if ('focus' in w) {
-          w.navigate(url);
-          return w.focus();
-        }
-      }
-      return self.clients.openWindow(url);
+      const w = windows.find((c) => 'focus' in c);
+      if (!w) return self.clients.openWindow(url);
+      // Focus first (it must happen while the tap still counts), then go to the
+      // dashboard. navigate() fails on a window this worker doesn't control yet:
+      // open a fresh one instead of doing nothing.
+      return w
+        .focus()
+        .then((c) => (c || w).navigate(url))
+        .catch(() => self.clients.openWindow(url));
     }),
   );
 });

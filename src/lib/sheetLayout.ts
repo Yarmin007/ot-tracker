@@ -110,7 +110,7 @@ const hm = (clock: string) => clock.split(':') as [string, string];
 
 /** Text for each cell of one table row, following the overtime rules in lib/ot.ts. */
 export function rowCells(slip: SheetSlip, breakdown?: SlipBreakdown) {
-  // Pass the breakdown from breakdownAll() so a day's 2-hour base is shared across its entries.
+  // Pass the breakdown from breakdownAll() so a day's base hours are shared across its entries.
   const b = breakdown ?? slipBreakdown(slip);
   const numbers: Partial<Record<NumberCell, string>> = {};
 
@@ -162,9 +162,9 @@ export function periodMonths(periodId: string) {
 }
 
 /** Chronological, split into template-sized pages (at least one page). */
-export function paginate<T extends SheetSlip>(slips: T[]): T[][] {
+export function paginate<T extends SheetSlip>(slips: T[], rowsPerPage = ROWS_PER_PAGE): T[][] {
   const sorted = [...slips].sort((a, b) => a.date.localeCompare(b.date) || (a.start_time ?? '').localeCompare(b.start_time ?? ''));
   const pages: T[][] = [];
-  for (let i = 0; i < sorted.length; i += ROWS_PER_PAGE) pages.push(sorted.slice(i, i + ROWS_PER_PAGE));
+  for (let i = 0; i < sorted.length; i += rowsPerPage) pages.push(sorted.slice(i, i + rowsPerPage));
   return pages.length ? pages : [[]];
 }

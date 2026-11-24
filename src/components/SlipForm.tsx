@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DAY_KEYS, baseUsedBefore, durationWords, findOverlap, isFriday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
+import { DAY_KEYS, baseMinutesFor, baseUsedBefore, durationWords, findOverlap, isFriday, isSaturday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
 import type { SlipActionResult } from '@/app/[locale]/dashboard/actions';
 import { useDurationWords } from '@/components/Duration';
 
@@ -46,7 +46,7 @@ export function SlipForm({
   onDone: (periodId: string, warning?: string) => void;
   recentReasons?: string[];
   defaultTimes?: { start: string; end: string };
-  /** All saved entries, so the preview shares the day's 2-hour base with earlier entries. */
+  /** All saved entries, so the preview shares the day's base hours with earlier entries. */
   otherSlips?: (SlipTimes & { id?: string })[];
 }) {
   const t = useTranslations('Overtime');
@@ -195,7 +195,7 @@ export function SlipForm({
               <div className="mt-2.5 space-y-1.5 text-sm">
                 {b.base && (
                   <div className="flex items-center justify-between gap-3 text-gray-600">
-                    <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />{t('firstTwoHours')}</span>
+                    <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-gray-400" />{t('firstBaseHours', { hours: baseMinutesFor(validDate ? date : '2000-01-03') / 60 })}</span>
                     <span dir="ltr" className="tabular-nums">{b.base.start} – {b.base.end}</span>
                   </div>
                 )}
@@ -213,7 +213,7 @@ export function SlipForm({
                     </span>
                   </div>
                 ) : (
-                  <p className="text-gray-500">{t('noOvertimeYet')}</p>
+                  <p className="text-gray-500">{t(validDate && isSaturday(date) ? 'noOvertimeSaturday' : 'noOvertimeYet')}</p>
                 )}
               </div>
             </div>

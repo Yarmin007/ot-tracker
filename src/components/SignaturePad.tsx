@@ -43,26 +43,41 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
     ctx.drawImage(src, (rect.width - w) / 2, (rect.height - h) / 2, w, h);
   };
 
-  // Size the canvas to its box (sharp on high-DPI screens) and show the saved signature.
+  // The current signature, for redrawing after a resize.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  // Size the canvas to its box (sharp on high-DPI screens) and show the saved
+  // signature. Re-done whenever the box changes size (phone rotated, window
+  // resized); otherwise strokes land away from the finger / mouse.
   useEffect(() => {
     const canvas = canvasRef.current!;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    const ctx = canvas.getContext('2d')!;
-    ctx.scale(dpr, dpr);
-    if (initial) {
+    let generation = 0;
+    const fit = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.round(rect.width * dpr);
+      const h = Math.round(rect.height * dpr);
+      if (!w || !h || (canvas.width === w && canvas.height === h)) return;
+      canvas.width = w; // also clears the canvas
+      canvas.height = h;
+      canvas.getContext('2d')!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const src = valueRef.current;
+      if (!src) return;
+      const mine = ++generation;
       const img = new Image();
       img.onload = () => {
-        const scale = Math.min((rect.width - 24) / img.width, (rect.height - 24) / img.height, 1);
-        const w = img.width * scale;
-        const h = img.height * scale;
-        ctx.drawImage(img, (rect.width - w) / 2, (rect.height - h) / 2, w, h);
+        if (mine === generation) showOnPad(img);
       };
-      img.src = initial;
-    }
-  }, [initial]);
+      img.src = src;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   /** Crop to the ink and export a compact transparent PNG. */
   const exportSignature = () => {

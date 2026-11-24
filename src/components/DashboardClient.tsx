@@ -5,10 +5,10 @@ import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DeleteSubmitButton } from '@/components/DeleteSubmitButton';
+import { DeleteSlipButton } from '@/components/DeleteSubmitButton';
 import { ModalShell, PeriodSelect } from '@/components/DashboardControls';
 import { SlipForm } from '@/components/SlipForm';
-import { createSlip, deleteSlip, updateSlip } from '@/app/[locale]/dashboard/actions';
+import { createSlip, updateSlip } from '@/app/[locale]/dashboard/actions';
 import {
   DAY_KEYS,
   MONTH_KEYS,
@@ -19,6 +19,7 @@ import {
   parseDateOnly,
   slipBreakdown,
   breakdownAll,
+  sheetSlips,
   splitMinutes,
 } from '@/lib/ot';
 import { Duration } from '@/components/Duration';
@@ -64,17 +65,30 @@ export function DashboardClient({
   const [notice, setNotice] = useState<string | null>(null);
 
   // UI state lives in the URL but is changed with the History API: no server round trip.
-  const setParams = (updates: Record<string, string | null>, mode: 'push' | 'replace' = 'push') => {
-    const params = new URLSearchParams(searchParams.toString());
+  // Reads the live URL (not the render's searchParams) so it is right even
+  // straight after a history.back().
+  const setParams = (updates: Record<string, string | null>, mode: 'push' | 'replace' = 'push', state: object | null = null) => {
+    const params = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(updates)) {
       if (value === null) params.delete(key);
       else params.set(key, value);
     }
     const url = `?${params.toString()}`;
-    if (mode === 'push') window.history.pushState(null, '', url);
-    else window.history.replaceState(null, '', url);
+    if (mode === 'push') window.history.pushState(state, '', url);
+    else window.history.replaceState(state, '', url);
   };
-  const closeModal = () => setParams({ modal: null, editId: null }, 'replace');
+  // The add/edit window gets its own history entry, so the phone's Back
+  // gesture closes it. Closing it any other way steps back over that entry
+  // (instead of leaving a duplicate that makes the next Back do nothing).
+  const openModal = (updates: Record<string, string | null>) => setParams(updates, 'push', { otModal: true });
+  const closeModal = (then: Record<string, string | null> = {}) => {
+    if ((window.history.state as { otModal?: boolean } | null)?.otModal) {
+      if (Object.keys(then).length) window.addEventListener('popstate', () => setParams(then, 'replace'), { once: true });
+      window.history.back();
+    } else {
+      setParams({ modal: null, editId: null, ...then }, 'replace');
+    }
+  };
 
   const periodLabel = (periodId: string) => {
     const { year, month, prevYear, prevMonth } = getPeriodRange(periodId);
@@ -102,8 +116,11 @@ export function DashboardClient({
   }, [slips, currentPeriodId, activePeriodId]);
 
   const totals = otTotals(activeSlips);
-  // Each day's 2-hour base is shared by that day's entries (in time order).
+  // Each day's base hours (2h, 6h on Saturday) are shared by that day's entries (in time order).
   const breakdowns = useMemo(() => breakdownAll(slips), [slips]);
+  // Entries that go on the printed sheet (a Saturday under 6 hours is left off).
+  const onSheet = useMemo(() => new Set(sheetSlips(activeSlips, breakdowns)), [activeSlips, breakdowns]);
+  const hasSheet = onSheet.size > 0;
 
   const shiftPeriod = (delta: number) => {
     const [y, m] = activePeriodId.split('-').map(Number);
@@ -128,7 +145,7 @@ export function DashboardClient({
 
   const afterSave = (periodId: string, warning?: string) => {
     setNotice(warning ?? null);
-    setParams({ modal: null, editId: null, period: periodId }, 'replace');
+    closeModal(periodId === activePeriodId ? {} : { period: periodId });
   };
 
   const th = "border-b border-e border-gray-200";
@@ -186,7 +203,7 @@ export function DashboardClient({
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+        <div className="p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           {/* Totals */}
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-10">
             <div>
@@ -206,16 +223,16 @@ export function DashboardClient({
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 xl:flex gap-3">
+          <div className="grid grid-cols-2 lg:flex gap-3">
             <button
               type="button"
-              onClick={() => setParams({ modal: 'add', editId: null })}
-              className="hidden xl:flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-black transition-colors shadow-sm gap-2 cursor-pointer"
+              onClick={() => openModal({ modal: 'add', editId: null })}
+              className="hidden lg:flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-black transition-colors shadow-sm gap-2 cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               {t('addTitle')}
             </button>
-            {activeSlips.length > 0 ? (
+            {hasSheet ? (
               <a
                 href={`/${locale}/sheet?period=${activePeriodId}`}
                 className="flex items-center justify-center bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm sm:text-base font-bold hover:bg-gray-50 transition-colors shadow-sm"
@@ -227,7 +244,7 @@ export function DashboardClient({
                 {t('sheetPreview')}
               </span>
             )}
-            {activeSlips.length > 0 ? (
+            {hasSheet ? (
               <PdfDownloadButton
                 periodId={activePeriodId}
                 className="flex items-center justify-center bg-[#991525] text-white px-4 py-3 rounded-xl text-sm sm:text-base font-bold hover:bg-[#7a111e] transition-colors shadow-sm gap-2 whitespace-nowrap"
@@ -245,7 +262,7 @@ export function DashboardClient({
       </section>
 
       {/* Phone: slips as cards */}
-      <section className="print:hidden xl:hidden mb-28">
+      <section className="print:hidden lg:hidden mb-28">
         <div className="flex items-baseline justify-between mb-3 px-1">
           <h2 className="text-lg font-extrabold text-gray-900">{t('historyTitle')}</h2>
           <span className="text-sm text-gray-500">{t('slipsCount', { count: activeSlips.length })}</span>
@@ -271,6 +288,7 @@ export function DashboardClient({
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 font-semibold">
                         {t(`days.${DAY_KEYS[parseDateOnly(slip.date).weekday]}`)}
                         {b.holiday && <span className="rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5">{t('holidayBadge')}</span>}
+                        {!onSheet.has(slip) && <span className="rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5">{t('notOnSheet')}</span>}
                       </div>
                       <p className="text-gray-900 font-semibold leading-snug mt-0.5 line-clamp-2">{slip.reason}</p>
                     </div>
@@ -288,14 +306,11 @@ export function DashboardClient({
                       {b.ot && <span className={`rounded-lg px-2 py-1 tabular-nums font-bold ${b.holiday ? 'bg-amber-100 text-amber-800' : 'bg-[#991525]/10 text-[#991525]'}`}>{b.ot.start}–{b.ot.end}</span>}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button type="button" onClick={() => setParams({ modal: 'edit', editId: slip.id })} aria-label={t('edit')}
+                      <button type="button" onClick={() => openModal({ modal: 'edit', editId: slip.id })} aria-label={t('edit')}
                         className="w-10 h-10 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 flex items-center justify-center cursor-pointer">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
-                      <form action={deleteSlip} className="w-10 h-10 flex items-center justify-center">
-                        <input type="hidden" name="slipId" value={slip.id} />
-                        <DeleteSubmitButton label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
-                      </form>
+                      <div className="w-10 h-10 flex items-center justify-center"><DeleteSlipButton slipId={slip.id} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} /></div>
                     </div>
                   </div>
                 </li>
@@ -306,10 +321,10 @@ export function DashboardClient({
       </section>
 
       {/* Phone: Add button pinned to the bottom of the screen */}
-      <div className="print:hidden xl:hidden fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-app via-app/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="print:hidden lg:hidden fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-app via-app/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
-          onClick={() => setParams({ modal: 'add', editId: null })}
+          onClick={() => openModal({ modal: 'add', editId: null })}
           className="w-full flex items-center justify-center gap-2 bg-[#991525] text-white py-4 rounded-2xl text-base font-bold shadow-lg shadow-[#991525]/25 active:scale-[.99] transition-transform cursor-pointer"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
@@ -318,7 +333,7 @@ export function DashboardClient({
       </div>
 
       {/* Large screens: the official-format table */}
-      <div className="print:hidden hidden xl:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+      <div className="print:hidden hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
         <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <h2 className="text-xl font-extrabold text-gray-900">{t('historyTitle')}</h2>
         </div>
@@ -371,6 +386,9 @@ export function DashboardClient({
                         {b.holiday && (
                           <span className="ms-2 inline-block rounded-full bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 align-middle">{t('holidayBadge')}</span>
                         )}
+                        {!onSheet.has(slip) && (
+                          <span className="ms-2 inline-block rounded-full bg-gray-100 text-gray-600 text-xs font-bold px-2 py-0.5 align-middle">{t('notOnSheet')}</span>
+                        )}
                       </td>
                       <td className="border-e border-gray-100 px-4 py-3 text-start text-gray-700 font-medium truncate max-w-[220px]" title={slip.reason ?? ''}>{slip.reason}</td>
 
@@ -398,17 +416,14 @@ export function DashboardClient({
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setParams({ modal: 'edit', editId: slip.id })}
+                            onClick={() => openModal({ modal: 'edit', editId: slip.id })}
                             className="text-gray-400 hover:text-blue-600 transition-colors p-1 cursor-pointer"
                             title={t('edit')}
                             aria-label={t('edit')}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <form action={deleteSlip}>
-                            <input type="hidden" name="slipId" value={slip.id} />
-                            <DeleteSubmitButton label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
-                          </form>
+                          <DeleteSlipButton slipId={slip.id} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
                         </div>
                       </td>
                     </tr>
@@ -430,11 +445,11 @@ export function DashboardClient({
 
       {/* Add / edit slip */}
       {(modal === 'add' || slipToEdit) && (
-        <ModalShell sheet onClose={closeModal} title={slipToEdit ? t('editTitle') : t('addTitle')} className="sm:max-w-lg">
+        <ModalShell sheet onClose={() => closeModal()} title={slipToEdit ? t('editTitle') : t('addTitle')} className="sm:max-w-lg">
           <div className="shrink-0 px-5 pt-3 pb-3 border-b border-gray-100 flex items-center justify-between">
             <div className="absolute top-2 inset-x-0 flex justify-center sm:hidden" aria-hidden="true"><span className="w-10 h-1.5 rounded-full bg-gray-300" /></div>
             <h3 className="font-extrabold text-gray-900 text-xl pt-2 sm:pt-0">{slipToEdit ? t('editTitle') : t('addTitle')}</h3>
-            <button type="button" onClick={closeModal} aria-label={t('close')} className="mt-1 sm:mt-0 w-10 h-10 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 flex items-center justify-center cursor-pointer">
+            <button type="button" onClick={() => closeModal()} aria-label={t('close')} className="mt-1 sm:mt-0 w-10 h-10 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 flex items-center justify-center cursor-pointer">
               {closeIcon}
             </button>
           </div>

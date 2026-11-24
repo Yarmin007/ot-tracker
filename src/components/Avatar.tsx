@@ -4,7 +4,9 @@ import { useState } from 'react';
 
 /** Round profile picture, falling back to initials (also if the image fails to load). */
 export function Avatar({ src, name, className = 'w-10 h-10 text-sm' }: { src?: string | null; name?: string | null; className?: string }) {
-  const [failed, setFailed] = useState(false);
+  // Remember which picture failed, so picking a new one shows it again.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = !!src && failedSrc === src;
   const initials = (name ?? '')
     .trim()
     .split(/\s+/)
@@ -16,7 +18,7 @@ export function Avatar({ src, name, className = 'w-10 h-10 text-sm' }: { src?: s
   if (src && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt="" onError={() => setFailed(true)} className={`${className} rounded-full object-cover bg-gray-100 ring-2 ring-white shadow-sm`} />
+      <img src={src} alt="" onError={() => setFailedSrc(src)} className={`${className} rounded-full object-cover bg-gray-100 ring-2 ring-white shadow-sm`} />
     );
   }
   return (

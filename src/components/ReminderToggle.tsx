@@ -39,7 +39,8 @@ export function ReminderToggle({ locale }: { locale: string }) {
       const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
       if (!supported) {
         // iPhone/iPad only allow web notifications once the app is added to the Home Screen.
-        const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        // iPadOS reports itself as a Mac; touch support gives it away.
+        const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
         const standalone = window.matchMedia('(display-mode: standalone)').matches;
         setState(ios && !standalone ? 'needs-install' : 'unsupported');
         return;
@@ -51,8 +52,11 @@ export function ReminderToggle({ locale }: { locale: string }) {
       const reg = await navigator.serviceWorker.register('/sw.js');
       const sub = await reg.pushManager.getSubscription();
       setState(sub ? 'on' : 'off');
+      // Keep the server's copy current: the reminder's language follows the
+      // app's language, and the device follows whoever is signed in now.
+      if (sub && Notification.permission === 'granted') void savePushSubscription(sub.toJSON(), locale);
     })().catch(() => setState('unsupported'));
-  }, []);
+  }, [locale]);
 
   const enable = async () => {
     setBusy(true);

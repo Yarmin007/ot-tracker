@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { configurePush, sendReminder } from '@/lib/push';
 
 type SubscriptionJSON = { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
@@ -21,6 +22,11 @@ export async function savePushSubscription(sub: SubscriptionJSON, locale: string
   const p256dh = sub.keys?.p256dh ?? '';
   const auth = sub.keys?.auth ?? '';
   if (!endpoint.startsWith('https://') || !p256dh || !auth) return { ok: false, error: 'Invalid subscription.' };
+
+  // A phone that someone else signed in on before: the device now belongs to
+  // this account. (That row isn't visible to this user, so the upsert below
+  // would be refused.)
+  await createAdminClient()?.from('push_subscriptions').delete().eq('endpoint', endpoint).neq('user_id', userId);
 
   const { error } = await supabase
     .from('push_subscriptions')

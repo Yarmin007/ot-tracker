@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ModalShell } from '@/components/DashboardControls';
 
 /** File name from Content-Disposition (prefers the UTF-8 filename*). */
@@ -30,7 +30,9 @@ const prefersShareSheet = () =>
  */
 export function PdfDownloadButton({ periodId, className, children }: { periodId: string; className: string; children: React.ReactNode }) {
   const t = useTranslations('Pdf');
-  const href = `/api/export?period=${periodId}`;
+  // The sheet comes in the app's language: the English form or the Dhivehi one.
+  const lang = useLocale() === 'en' ? 'en' : 'dv';
+  const href = `/api/export?period=${periodId}&lang=${lang}`;
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);

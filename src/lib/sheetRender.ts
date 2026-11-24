@@ -9,6 +9,7 @@ import {
   SIGNATURE_COLUMNS,
   SHEET_HEIGHT,
   SHEET_WIDTH,
+  ROWS_PER_PAGE,
   paginate,
   periodMonths,
   profileValues,
@@ -20,7 +21,24 @@ import {
 } from '@/lib/sheetLayout';
 import { HEADER_CELLS, LOGO_BOX, STATIC_TEXTS, tableLines } from '@/lib/sheetTemplate';
 import { LOGO_PATHS, LOGO_VIEWBOX } from '@/lib/logoPaths';
-import { breakdownAll } from '@/lib/ot';
+import { breakdownAll, getPeriodRange, parseDateOnly, sheetSlips } from '@/lib/ot';
+import {
+  COL_X,
+  EN_BODY_LINES_X,
+  EN_BODY_TOP,
+  EN_HEADER,
+  EN_LOGO,
+  EN_NUMBER_COLUMNS,
+  EN_ROWS_PER_PAGE,
+  EN_ROW_HEIGHT,
+  EN_SIGNATURE_COLUMNS,
+  ENGLISH_DAYS,
+  ENGLISH_MONTHS,
+  ROW_Y,
+  cols,
+  pt,
+  range,
+} from '@/lib/sheetEnglishLayout';
 
 // The sheet is drawn once through a small "surface" interface, which is
 // implemented for PDF (download / print) and SVG (the in-app sheet viewer), so
@@ -30,6 +48,11 @@ import { breakdownAll } from '@/lib/ot';
 const ROOT = process.cwd();
 const WAHEED_PATH = path.join(ROOT, 'src/app/fonts/MVWaheed.otf');
 const FARUMA_PATH = path.join(ROOT, 'src/app/fonts/Faruma.ttf');
+// The English form is set in Cambria in Excel. Cambria is Microsoft's and may not
+// be shipped in this (public) repo, so Caladea is used: a free (SIL OFL) font made
+// as a drop-in for Cambria, with the same letter widths, so the layout matches.
+const CAMBRIA_PATH = path.join(ROOT, 'src/app/fonts/Caladea-Regular.ttf');
+const CAMBRIA_BOLD_PATH = path.join(ROOT, 'src/app/fonts/Caladea-Bold.ttf');
 
 const INK = '#231f20';
 const ROW_HEIGHT = 24.573;
@@ -161,6 +184,16 @@ class Writer {
     }
   }
 
+  /** Left edge at `x`; returns the width drawn. */
+  left(raw: string, x: number, y: number, size: number, maxWidth = Infinity) {
+    const text = this.clean(raw);
+    if (!text) return 0;
+    const fitted = this.fit(text, size, maxWidth);
+    const width = this.width(fitted.text, fitted.size);
+    this.right(fitted.text, x + width, y, fitted.size);
+    return width;
+  }
+
   center(raw: string, center: number, y: number, size: number, maxWidth = Infinity) {
     const text = this.clean(raw);
     if (!text) return;
@@ -184,11 +217,17 @@ class Writer {
 // Drawing the sheet (shared by PDF and SVG)
 // ---------------------------------------------------------------------------
 
-let fonts: Promise<{ waheed: FKFont; faruma: FKFont }> | null = null;
+type Fonts = { waheed: FKFont; faruma: FKFont; cambria: FKFont; cambriaBold: FKFont };
+let fonts: Promise<Fonts> | null = null;
 /** Fonts are parsed once per server instance and reused. */
 function loadFonts() {
-  fonts ??= Promise.all([fs.readFile(WAHEED_PATH), fs.readFile(FARUMA_PATH)])
-    .then(([w, f]) => ({ waheed: fontkit.create(w), faruma: fontkit.create(f) }))
+  fonts ??= Promise.all([WAHEED_PATH, FARUMA_PATH, CAMBRIA_PATH, CAMBRIA_BOLD_PATH].map((p) => fs.readFile(p)))
+    .then(([w, f, c, cb]) => ({
+      waheed: fontkit.create(w),
+      faruma: fontkit.create(f),
+      cambria: fontkit.create(c),
+      cambriaBold: fontkit.create(cb),
+    }))
     .catch((err) => {
       fonts = null;
       throw err;
@@ -202,12 +241,36 @@ function pngSize(dataUrl: string) {
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-export type SheetInput = { profile: SheetProfile; slips: SheetSlip[]; periodId: string | null };
+export type SheetLang = 'dv' | 'en';
+export type SheetInput = {
+  profile: SheetProfile;
+  slips: SheetSlip[];
+  periodId: string | null;
+  /** Which official form to fill: the Dhivehi one (default) or the English one. */
+  lang?: SheetLang;
+};
+
+const rowsPerPage = (lang: SheetLang | undefined) => (lang === 'en' ? EN_ROWS_PER_PAGE : ROWS_PER_PAGE);
+
+/** The employee's signature, fitted and centred in a signature cell. */
+function drawSignature(
+  surface: Surface,
+  size: { width: number; height: number } | null,
+  col: { x0: number; x1: number },
+  rowTop: number,
+  rowHeight: number,
+) {
+  if (!size) return;
+  const scale = Math.min((col.x1 - col.x0 - 4) / size.width, (rowHeight - 5) / size.height);
+  const sw = size.width * scale;
+  const sh = size.height * scale;
+  surface.signature((col.x0 + col.x1) / 2 - sw / 2, rowTop + rowHeight / 2 - sh / 2, sw, sh);
+}
 
 const validSignature = (profile: SheetProfile) =>
   profile?.signature?.startsWith('data:image/png;base64,') ? profile.signature : null;
 
-function drawPage(surface: Surface, fontsLoaded: { waheed: FKFont; faruma: FKFont }, input: SheetInput, pageSlips: SheetSlip[]) {
+function drawPage(surface: Surface, fontsLoaded: Fonts, input: SheetInput, pageSlips: SheetSlip[]) {
   const { waheed, faruma } = fontsLoaded;
 
   // Crest
@@ -243,16 +306,10 @@ function drawPage(surface: Surface, fontsLoaded: { waheed: FKFont; faruma: FKFon
   // Signature size, to fit it into the ސޮއި cells.
   const sig = validSignature(input.profile);
   const sigSize = sig ? pngSize(sig) : null;
-  const sign = (col: { x0: number; x1: number }, baseline: number) => {
-    if (!sigSize) return;
-    const rowTop = baseline - ROW_BASELINE;
-    const scale = Math.min((col.x1 - col.x0 - 4) / sigSize.width, (ROW_HEIGHT - 5) / sigSize.height);
-    const sw = sigSize.width * scale;
-    const sh = sigSize.height * scale;
-    surface.signature((col.x0 + col.x1) / 2 - sw / 2, rowTop + ROW_HEIGHT / 2 - sh / 2, sw, sh);
-  };
+  const sign = (col: { x0: number; x1: number }, baseline: number) =>
+    drawSignature(surface, sigSize, col, baseline - ROW_BASELINE, ROW_HEIGHT);
 
-  // Breakdowns over the whole period, so a day's 2-hour base is shared across
+  // Breakdowns over the whole period, so a day's base hours are shared across
   // that day's entries even when they fall on different pages.
   const breakdowns = breakdownAll(input.slips);
 
@@ -275,6 +332,140 @@ function drawPage(surface: Surface, fontsLoaded: { waheed: FKFont; faruma: FKFon
       sign(SIGNATURE_COLUMNS.otEnd, y);
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// The English form (layout in sheetEnglishLayout.ts), in Cambria's stand-in Caladea
+// ---------------------------------------------------------------------------
+
+/** Filled-in values are written a little larger than the printed labels, like handwriting. */
+const EN_VALUE_SIZE = 8;
+
+function drawEnglishPage(surface: Surface, f: Fonts, input: SheetInput, pageSlips: SheetSlip[]) {
+  // Faruma covers any Dhivehi typed into names or work details.
+  const w = new Writer(surface, f.cambria, f.faruma);
+  const bold = new Writer(surface, f.cambriaBold, f.faruma);
+  const label = pt(11);
+  const pad = 2 * (label / 11) + 1;
+  /** Baseline for bottom-aligned text in sheet row `row` (1-based), as Excel places it. */
+  const bottomBaseline = (row: number, size = label) => ROW_Y[row] - size * 0.26;
+  const midBaseline = (y0: number, y1: number, size: number) => (y0 + y1) / 2 + size * 0.32;
+
+  // Crest
+  const logoScale = EN_LOGO.height / LOGO_VIEWBOX[3];
+  for (const p of LOGO_PATHS) surface.shape(p.d, EN_LOGO.x, EN_LOGO.y, logoScale, p.fill);
+
+  // Letterhead (A1:D1, two lines, left, vertically centred)
+  const head = range('A1:D1');
+  const lineGap = label * 1.17;
+  const headMid = (head.y0 + head.y1) / 2;
+  w.left('Hamad Bin Khalifa Al Thani School', head.x0 + pad, headMid - lineGap / 2 + label * 0.32, label);
+  w.left('L. Gan', head.x0 + pad, headMid + lineGap / 2 + label * 0.32, label);
+
+  // Title (A2:X2)
+  const title = range('A2:X2');
+  bold.center('OVERTIME APPROVAL SHEET', (title.x0 + title.x1) / 2, midBaseline(title.y0, title.y1, pt(16)), pt(16));
+
+  // Staff details. Values go after the label, or on the printed blank line.
+  const p = profileValues(input.profile);
+  const valueAfter = (text: string, value: string, col: string, row: number, until: string) => {
+    const x = cols(col).x0 + pad;
+    const y = bottomBaseline(row);
+    const lw = w.left(text, x, y, label);
+    w.left(value, x + lw + label * 0.4, y, EN_VALUE_SIZE, cols(until).x0 - (x + lw + label * 0.4) - 4);
+  };
+  const valueOnBlank = (text: string, blank: string, value: string, col: string, row: number) => {
+    const x = cols(col).x0 + pad;
+    const y = bottomBaseline(row);
+    w.left(`${text}${blank}`, x, y, label);
+    const blankWidth = w.width(blank, label);
+    const blankStart = x + w.width(`${text}${blank}`, label) - blankWidth;
+    w.center(value, blankStart + blankWidth / 2, y - 0.6, EN_VALUE_SIZE, blankWidth);
+  };
+  valueAfter('Name of staff:', p.name, 'A', 3, 'G');
+  valueOnBlank('Record Card No:', '_______________', p.cardNo, 'G', 3);
+  valueOnBlank('Basic Salary: ', '_______________', p.salary, 'T', 3);
+  valueAfter('Designation:', p.designation, 'A', 5, 'G');
+  valueOnBlank('Session Duration: ', '________________', '', 'G', 5);
+
+  // "16th ____ 2026 to 15th ____ 2026" (A7:X7, centred), months written on the blanks
+  const periodSize = pt(12);
+  const line = range('A7:X7');
+  const py = bottomBaseline(7, periodSize);
+  const period = input.periodId ? getPeriodRange(input.periodId) : null;
+  const year = new Date().getFullYear();
+  const pieces = [
+    { text: '16th ' },
+    { text: '_____________', value: period ? ENGLISH_MONTHS[period.prevMonth] : '' },
+    { text: ` ${period?.prevYear ?? year} to 15th ` },
+    { text: '_________________', value: period ? ENGLISH_MONTHS[period.month] : '' },
+    { text: ` ${period?.year ?? year}` },
+  ];
+  const widths = pieces.map((piece) => w.width(piece.text, periodSize));
+  let px = (line.x0 + line.x1) / 2 - widths.reduce((a, b) => a + b, 0) / 2;
+  pieces.forEach((piece, i) => {
+    // Spaces at the piece edges are dropped when drawing, so place each piece by its own width.
+    const lead = piece.text.startsWith(' ') ? w.width(' ', periodSize) : 0;
+    w.left(piece.text, px + lead, py, periodSize);
+    if (piece.value) w.center(piece.value, px + widths[i] / 2, py - 0.6, EN_VALUE_SIZE, widths[i]);
+    px += widths[i];
+  });
+
+  // Table header: cell borders and centred headings
+  for (const cell of EN_HEADER) {
+    const r = range(cell.ref);
+    surface.line(r.x0, r.y0, r.x1, r.y0, 0.5);
+    surface.line(r.x0, r.y1, r.x1, r.y1, 0.5);
+    surface.line(r.x0, r.y0, r.x0, r.y1, 0.5);
+    surface.line(r.x1, r.y0, r.x1, r.y1, 0.5);
+    w.inCell(cell.text, r, pt(cell.size));
+  }
+
+  // Body grid
+  const bottom = EN_BODY_TOP + EN_ROWS_PER_PAGE * EN_ROW_HEIGHT;
+  for (let r = 0; r <= EN_ROWS_PER_PAGE; r++) {
+    const y = EN_BODY_TOP + r * EN_ROW_HEIGHT;
+    surface.line(COL_X[0], y, COL_X[COL_X.length - 1], y, 0.5);
+  }
+  for (const x of EN_BODY_LINES_X) surface.line(x, EN_BODY_TOP, x, bottom, 0.5);
+
+  // Rows
+  const sig = validSignature(input.profile);
+  const sigSize = sig ? pngSize(sig) : null;
+  const breakdowns = breakdownAll(input.slips);
+  const centerIn = (text: string, col: string, y: number, size = EN_VALUE_SIZE) => {
+    const c = cols(col);
+    w.center(text, (c.x0 + c.x1) / 2, y, size, c.x1 - c.x0 - 3);
+  };
+
+  pageSlips.forEach((slip, row) => {
+    const top = EN_BODY_TOP + row * EN_ROW_HEIGHT;
+    const y = midBaseline(top, top + EN_ROW_HEIGHT, EN_VALUE_SIZE);
+    const cell = rowCells(slip, breakdowns.get(slip));
+    const d = parseDateOnly(slip.date);
+    // One size for every row (the narrow Date / Day columns would otherwise shrink only the long ones).
+    centerIn(`${String(d.day).padStart(2, '0')}/${String(d.month + 1).padStart(2, '0')}/${d.year}`, 'A', y, 6.6);
+    centerIn(ENGLISH_DAYS[d.weekday] ?? '', 'B', y, 6.6);
+    const details = cols('C:D');
+    w.left(cell.reason, details.x0 + pad + 1, y, EN_VALUE_SIZE, details.x1 - details.x0 - 2 * pad - 2);
+    for (const [key, text] of Object.entries(cell.numbers) as [NumberCell, string][]) {
+      centerIn(text, EN_NUMBER_COLUMNS[key], y);
+    }
+    if (cell.numbers.baseStartHours) {
+      drawSignature(surface, sigSize, cols(EN_SIGNATURE_COLUMNS.baseStart), top, EN_ROW_HEIGHT);
+      drawSignature(surface, sigSize, cols(EN_SIGNATURE_COLUMNS.baseEnd), top, EN_ROW_HEIGHT);
+    }
+    if (cell.numbers.otStartHours) {
+      drawSignature(surface, sigSize, cols(EN_SIGNATURE_COLUMNS.otStart), top, EN_ROW_HEIGHT);
+      drawSignature(surface, sigSize, cols(EN_SIGNATURE_COLUMNS.otEnd), top, EN_ROW_HEIGHT);
+    }
+  });
+}
+
+/** One sheet page in the requested form. */
+function drawSheetPage(surface: Surface, f: Fonts, input: SheetInput, pageSlips: SheetSlip[]) {
+  if (input.lang === 'en') drawEnglishPage(surface, f, input, pageSlips);
+  else drawPage(surface, f, input, pageSlips);
 }
 
 // ---------------------------------------------------------------------------
@@ -335,9 +526,9 @@ export async function buildOtSheetPdf(input: SheetInput) {
     }
   }
 
-  for (const pageSlips of paginate(input.slips)) {
+  for (const pageSlips of paginate(sheetSlips(input.slips), rowsPerPage(input.lang))) {
     const page = doc.addPage([SHEET_WIDTH, SHEET_HEIGHT]);
-    drawPage(new PdfSurface(page, signatureImage), loaded, input, pageSlips);
+    drawSheetPage(new PdfSurface(page, signatureImage), loaded, input, pageSlips);
   }
   return doc.save();
 }
@@ -397,9 +588,9 @@ class SvgSurface implements Surface {
 export async function buildOtSheetSvgs(input: SheetInput) {
   const loaded = await loadFonts();
   const sig = validSignature(input.profile);
-  return paginate(input.slips).map((pageSlips) => {
+  return paginate(sheetSlips(input.slips), rowsPerPage(input.lang)).map((pageSlips) => {
     const surface = new SvgSurface(sig);
-    drawPage(surface, loaded, input, pageSlips);
+    drawSheetPage(surface, loaded, input, pageSlips);
     return surface.toString();
   });
 }

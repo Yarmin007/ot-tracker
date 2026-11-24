@@ -6,9 +6,17 @@ import { ProfileForm } from '@/components/ProfileForm';
 import { ReminderToggle } from '@/components/ReminderToggle';
 import { InstallApp } from '@/components/InstallApp';
 import { SignOutButton } from '@/components/SignOutButton';
+import { AccountSettings } from '@/components/AccountSettings';
 
-export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function SettingsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ link?: string; msg?: string }>;
+}) {
   const { locale } = await params;
+  const { link, msg } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'Settings' });
   const tDash = await getTranslations({ locale, namespace: 'Dashboard' });
   const supabase = await createClient();
@@ -18,7 +26,13 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   if (!userId) redirect(`/${locale}/login`);
 
   // select('*') so this keeps working before the signature column is added.
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+  // getUser (not just the token claims) for the up-to-date sign-in methods.
+  const [{ data: profile }, { data: userData }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+  const user = userData.user;
+  const providers = [...new Set((user?.identities ?? []).map((i) => i.provider))];
 
   return (
     <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
@@ -31,6 +45,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
           <ReminderToggle locale={locale} />
         </div>
         <ProfileForm locale={locale} initial={profile} mode="settings" />
+        <div className="mt-6">
+          <AccountSettings
+            locale={locale}
+            email={user?.email ?? ''}
+            providers={providers}
+            // Setting a password on a Google account doesn't add an "email" sign-in method,
+            // so the app also records it in the user's metadata when one is set.
+            hasPassword={providers.includes('email') || user?.user_metadata?.has_password === true}
+            linkResult={link === 'ok' ? { ok: true } : link === 'error' ? { ok: false, message: msg } : undefined}
+          />
+        </div>
         <div className="mt-8 pb-24 md:pb-8">
           <SignOutButton locale={locale} label={tDash('signOut')} pendingLabel={tDash('signingOut')} variant="full" />
         </div>

@@ -36,7 +36,12 @@ export default async function SheetPage({
       .order('start_time', { ascending: true }),
   ]);
 
-  const pages = await buildOtSheetSvgs({ profile, slips: (slips ?? []) as SheetSlip[], periodId: period });
+  const pages = await buildOtSheetSvgs({
+    profile,
+    slips: (slips ?? []) as SheetSlip[],
+    periodId: period,
+    lang: locale === 'en' ? 'en' : 'dv',
+  });
 
   const tOt = await getTranslations({ locale, namespace: 'Overtime' });
   const prev = tOt(`months.${MONTH_KEYS[prevMonth]}`);
