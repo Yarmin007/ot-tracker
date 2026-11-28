@@ -46,7 +46,7 @@ export function BottomNav({ locale, labels, currentPeriodId }: { locale: string;
   return (
     <nav
       aria-label="Main"
-      className="md:hidden print:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 px-2 pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden print:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
     >
       <div className="grid grid-cols-5 items-center max-w-lg mx-auto">
         {item('dashboard', `/${locale}/dashboard`, labels.dashboard)}

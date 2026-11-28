@@ -46,7 +46,7 @@ export function AppStatus({ offlineText }: { offlineText: string }) {
 
   if (online) return null;
   return (
-    <div role="status" className="print:hidden sticky top-14 md:top-16 z-30 bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 flex items-center justify-center gap-2 text-center">
+    <div role="status" className="print:hidden sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-[calc(4rem+env(safe-area-inset-top))] z-30 bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 flex items-center justify-center gap-2 text-center">
       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M8.5 16.5a5 5 0 017 0M5 13a10 10 0 015.2-2.8M12 9a10 10 0 017 4M2 8.8A15 15 0 018.8 5M15.2 5A15 15 0 0122 8.8" /></svg>
       {offlineText}
     </div>

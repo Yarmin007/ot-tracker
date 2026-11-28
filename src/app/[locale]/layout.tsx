@@ -53,7 +53,10 @@ export async function generateViewport(): Promise<Viewport> {
   // Matches the app's header: Android colours its status / navigation bars with
   // this. Follows the Appearance choice in Settings (or the phone when Automatic).
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
-  return { themeColor: themeColors(theme) };
+  // viewportFit 'cover': iPhones only report the home-bar / notch space
+  // (env(safe-area-inset-*)) when the page asks for it; the bottom bar and
+  // header use those values to keep clear of the edges.
+  return { themeColor: themeColors(theme), viewportFit: 'cover' };
 }
 
 export default async function RootLayout({

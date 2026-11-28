@@ -24,7 +24,7 @@ export async function AppHeader({ locale, labels }: { locale: string; labels: Na
     : { data: null };
 
   return (
-    <header className="print:hidden bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+    <header className="print:hidden bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200 pt-[env(safe-area-inset-top)] px-[env(safe-area-inset-left)]">
       <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 md:h-16 items-center gap-3">
           <Link href={`/${locale}/dashboard`} className="flex items-center gap-2 sm:gap-3 min-w-0">
