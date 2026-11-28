@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { signOut } from '@/app/[locale]/dashboard/actions';
+import { signOut } from '@/app/[locale]/(app)/dashboard/actions';
 import { ModalShell } from '@/components/DashboardControls';
 
 const icon = (

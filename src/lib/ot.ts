@@ -15,6 +15,10 @@ export function parseDateOnly(dateStr: string) {
 }
 
 /** Payroll cycles run from the 16th of one month to the 15th of the next. Id = "YYYY-MM" of the ending month. */
+/** Today's date in the Maldives, as YYYY-MM-DD. */
+export const todayInMaldives = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Indian/Maldives', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
 export function getPeriodId(dateStr: string) {
   let { year, month } = parseDateOnly(dateStr);
   const { day } = parseDateOnly(dateStr);

@@ -82,7 +82,7 @@ async function overlapError(
 }
 
 function done(date: string, holidayNotSaved: boolean): SlipActionResult {
-  revalidatePath('/[locale]/dashboard', 'page');
+  revalidatePath('/[locale]/(app)/dashboard', 'page');
   return { ok: true, periodId: getPeriodId(date), holidayNotSaved };
 }
 
@@ -139,7 +139,7 @@ export async function deleteSlip(slipId: string): Promise<{ ok: true } | { ok: f
   if (!slipId) return { ok: false, error: 'invalid' };
   const { error } = await supabase.from('overtime_slips').delete().eq('id', slipId).eq('user_id', userId);
   if (error) return { ok: false, error: error.message };
-  revalidatePath('/[locale]/dashboard', 'page');
+  revalidatePath('/[locale]/(app)/dashboard', 'page');
   return { ok: true };
 }
 

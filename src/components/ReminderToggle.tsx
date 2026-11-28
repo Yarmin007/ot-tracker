@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { removePushSubscription, savePushSubscription, sendTestNotification } from '@/app/[locale]/settings/pushActions';
+import { removePushSubscription, savePushSubscription, sendTestNotification } from '@/app/[locale]/(app)/settings/pushActions';
 
 // Cleaned in case the dashboard value was pasted with "=", quotes or spaces.
 const VAPID_PUBLIC_KEY = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '')

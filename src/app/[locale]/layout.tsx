@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { cookies } from 'next/headers';
+import { THEME_COOKIE, parseTheme, themeColors } from '@/lib/theme';
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -47,9 +49,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: '#991525',
-};
+export async function generateViewport(): Promise<Viewport> {
+  // Matches the app's header: Android colours its status / navigation bars with
+  // this. Follows the Appearance choice in Settings (or the phone when Automatic).
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  return { themeColor: themeColors(theme) };
+}
 
 export default async function RootLayout({
   children,
@@ -60,6 +65,7 @@ export default async function RootLayout({
 }) {
   const { locale } = await params;
   const messages = await getMessages();
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   const isDhivehi = locale === 'dv';
   const fontClass = isDhivehi ? mvWaheed.className : inter.className;
@@ -70,6 +76,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={direction}
+      data-theme={theme === 'auto' ? undefined : theme}
       translate="no"
       className={`notranslate ${inter.variable} ${mvWaheed.variable} ${faruma.variable} ${notoThaana.variable}`}
       suppressHydrationWarning

@@ -5,7 +5,7 @@ import { Logo } from '@/components/Logo';
  * navigations don't flash, then shows a slim progress bar and the crest
  * inside a spinning ring.
  */
-export default function Loading() {
+export function FullScreenLoading() {
   return (
     <div className="fixed inset-0 z-[200] bg-app/80 backdrop-blur-[2px] flex items-center justify-center animate-[fade-in-late_.6s_ease-out_both]" role="status" aria-live="polite">
       <div className="absolute top-0 inset-x-0 h-1 overflow-hidden bg-[#991525]/10">

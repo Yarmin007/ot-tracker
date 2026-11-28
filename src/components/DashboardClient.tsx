@@ -2,13 +2,14 @@
 
 import { InstallApp } from '@/components/InstallApp';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DeleteFailedModal, DeleteSlipButton } from '@/components/DeleteSubmitButton';
 import { ModalShell, PeriodSelect } from '@/components/DashboardControls';
 import { SlipForm } from '@/components/SlipForm';
-import { createSlip, updateSlip } from '@/app/[locale]/dashboard/actions';
+import { createSlip, deleteSlip, updateSlip } from '@/app/[locale]/(app)/dashboard/actions';
+import { buzz } from '@/lib/haptics';
 import {
   DAY_KEYS,
   MONTH_KEYS,
@@ -33,6 +34,9 @@ export type DashboardSlip = {
   reason: string | null;
   is_holiday?: boolean | null;
 };
+
+/** How long "Undo" is offered after deleting an entry. */
+const UNDO_MS = 5000;
 
 const closeIcon = (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -61,21 +65,75 @@ export function DashboardClient({
   const t = useTranslations('Overtime');
   const tr = useTranslations('Reminder');
   const isSubmissionDay = !!today && today.endsWith('-15');
+  // The last few days before the 15th: count down to the submission day.
+  const dayOfMonth = today ? Number(today.slice(8, 10)) : 0;
+  const daysToSubmit = dayOfMonth >= 11 && dayOfMonth < 15 ? 15 - dayOfMonth : 0;
   const searchParams = useSearchParams();
   const [notice, setNotice] = useState<string | null>(null);
-  // Entries being deleted disappear straight away instead of after the server's
-  // round trip; one whose delete fails comes back (see DeleteSlipButton).
+  // Deleting: the entry disappears at once and "Undo" is offered for a few
+  // seconds; only then is it deleted on the server. If that fails, it comes back.
   const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
   const [deleteFailed, setDeleteFailed] = useState(false);
-  const markRemoving = (id: string, on: boolean) => {
-    if (!on) setDeleteFailed(true); // only called back when the delete failed
+  const [undoable, setUndoable] = useState<string | null>(null);
+  const pendingDelete = useRef<{ id: string; timer: number } | null>(null);
+  const markRemoving = (id: string, on: boolean) =>
     setRemoving((prev) => {
       const next = new Set(prev);
       if (on) next.add(id);
       else next.delete(id);
       return next;
     });
+  const commitDelete = (id: string) => {
+    const restore = () => {
+      markRemoving(id, false);
+      setDeleteFailed(true);
+    };
+    deleteSlip(id)
+      .then((r) => !r.ok && restore())
+      .catch(restore); // offline / server unreachable
   };
+  /** Send a waiting delete now (another delete, leaving the screen, app hidden). */
+  const flushDelete = () => {
+    const p = pendingDelete.current;
+    if (!p) return;
+    window.clearTimeout(p.timer);
+    pendingDelete.current = null;
+    setUndoable(null);
+    commitDelete(p.id);
+  };
+  const requestDelete = (id: string) => {
+    flushDelete();
+    buzz();
+    markRemoving(id, true);
+    const timer = window.setTimeout(() => {
+      pendingDelete.current = null;
+      setUndoable(null);
+      commitDelete(id);
+    }, UNDO_MS);
+    pendingDelete.current = { id, timer };
+    setUndoable(id);
+  };
+  const undoDelete = () => {
+    const p = pendingDelete.current;
+    if (!p) return;
+    window.clearTimeout(p.timer);
+    pendingDelete.current = null;
+    setUndoable(null);
+    markRemoving(p.id, false);
+  };
+  // Don't lose a waiting delete when the app goes to the background or this screen closes.
+  const flushRef = useRef(flushDelete);
+  useEffect(() => {
+    flushRef.current = flushDelete;
+  });
+  useEffect(() => {
+    const onHide = () => document.visibilityState === 'hidden' && flushRef.current();
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      flushRef.current();
+    };
+  }, []);
   const slips = useMemo(
     () => (removing.size ? serverSlips.filter((s) => !removing.has(s.id)) : serverSlips),
     [serverSlips, removing],
@@ -161,6 +219,7 @@ export function DashboardClient({
   const slipToEdit = modal === 'edit' ? slips.find((s) => s.id === searchParams.get('editId')) : undefined;
 
   const afterSave = (periodId: string, warning?: string) => {
+    buzz();
     setNotice(warning ?? null);
     closeModal(periodId === activePeriodId ? {} : { period: periodId });
   };
@@ -182,6 +241,18 @@ export function DashboardClient({
             <span className="font-bold text-gray-900">{tr('banner')}</span>
           </span>
           <a href={`/${locale}/sheet?period=${currentPeriodId}`} className="shrink-0 text-center px-4 py-2.5 rounded-xl bg-[#991525] text-white text-sm font-bold hover:bg-[#7a111e]">
+            {tr('bannerAction')}
+          </a>
+        </div>
+      )}
+
+      {daysToSubmit > 0 && (
+        <div role="status" className="print:hidden mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+          <span className="shrink-0 w-11 h-11 rounded-xl bg-amber-500 text-white flex flex-col items-center justify-center leading-none">
+            <span className="text-lg font-extrabold">{daysToSubmit}</span>
+          </span>
+          <span className="flex-1 font-bold text-amber-900">{tr('daysLeft', { count: daysToSubmit })}</span>
+          <a href={`/${locale}/sheet?period=${currentPeriodId}`} className="shrink-0 px-3.5 py-2 rounded-xl bg-white border border-amber-200 text-amber-900 text-sm font-bold hover:bg-amber-100">
             {tr('bannerAction')}
           </a>
         </div>
@@ -242,11 +313,11 @@ export function DashboardClient({
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 lg:flex gap-3">
+          <div className="grid grid-cols-2 md:flex gap-3">
             <button
               type="button"
               onClick={() => openModal({ modal: 'add', editId: null })}
-              className="hidden lg:flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-black transition-colors shadow-sm gap-2 cursor-pointer"
+              className="hidden md:flex items-center justify-center bg-gray-900 text-white px-5 py-3 rounded-xl text-base font-bold hover:bg-black transition-colors shadow-sm gap-2 cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               {t('addTitle')}
@@ -281,7 +352,7 @@ export function DashboardClient({
       </section>
 
       {/* Phone: slips as cards */}
-      <section className="print:hidden lg:hidden mb-28">
+      <section className="print:hidden lg:hidden mb-6">
         <div className="flex items-baseline justify-between mb-3 px-1">
           <h2 className="text-lg font-extrabold text-gray-900">{t('historyTitle')}</h2>
           <span className="text-sm text-gray-500">{t('slipsCount', { count: activeSlips.length })}</span>
@@ -329,7 +400,7 @@ export function DashboardClient({
                         className="w-10 h-10 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 flex items-center justify-center cursor-pointer">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
-                      <div className="w-10 h-10 flex items-center justify-center"><DeleteSlipButton slipId={slip.id} onRemovingChange={markRemoving} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} /></div>
+                      <DeleteSlipButton label={t('delete')} onDelete={() => requestDelete(slip.id)} />
                     </div>
                   </div>
                 </li>
@@ -339,17 +410,20 @@ export function DashboardClient({
         )}
       </section>
 
-      {/* Phone: Add button pinned to the bottom of the screen */}
-      <div className="print:hidden lg:hidden fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-app via-app/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <button
-          type="button"
-          onClick={() => openModal({ modal: 'add', editId: null })}
-          className="w-full flex items-center justify-center gap-2 bg-[#991525] text-white py-4 rounded-2xl text-base font-bold shadow-lg shadow-[#991525]/25 active:scale-[.99] transition-transform cursor-pointer"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-          {t('addTitle')}
-        </button>
-      </div>
+      {/* "Entry deleted · Undo" (above the phones' bottom bar) */}
+      {undoable && (
+        <div className="print:hidden fixed inset-x-0 z-50 px-4 flex justify-center bottom-[calc(5.75rem+env(safe-area-inset-bottom))] md:bottom-6 pointer-events-none">
+          <div role="status" className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-2xl bg-gray-900 text-white shadow-xl animate-[sheet-up_.2s_ease-out]">
+            <div className="flex items-center justify-between gap-3 ps-4 pe-2 py-2">
+              <span className="text-sm font-semibold">{t('deleted')}</span>
+              <button type="button" onClick={undoDelete} className="px-3 py-2 rounded-xl text-sm font-extrabold text-amber-300 hover:bg-white/10 cursor-pointer">
+                {t('undo')}
+              </button>
+            </div>
+            <div key={undoable} className="h-1 bg-amber-300/80 origin-left rtl:origin-right animate-[undo-timer_5s_linear_forwards]" aria-hidden="true" />
+          </div>
+        </div>
+      )}
 
       {/* Large screens: the official-format table */}
       <div className="print:hidden hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
@@ -442,7 +516,7 @@ export function DashboardClient({
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <DeleteSlipButton slipId={slip.id} onRemovingChange={markRemoving} label={t('delete')} details={`${slip.date} · ${slip.start_time.slice(0, 5)}–${slip.end_time.slice(0, 5)}`} />
+                          <DeleteSlipButton label={t('delete')} onDelete={() => requestDelete(slip.id)} />
                         </div>
                       </td>
                     </tr>

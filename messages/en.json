@@ -67,7 +67,10 @@
     "signingOut": "Signing out…",
     "signOutConfirmTitle": "Sign out?",
     "signOutConfirmHint": "You'll need to sign in again to use the app.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "navAdd": "Add",
+    "navSheet": "Sheet",
+    "offline": "You're offline. Entries can't be saved until you're back online."
   },
   "Overtime": {
     "addTitle": "Add Overtime",
@@ -166,7 +169,13 @@
     "deleteHint": "This can't be undone.",
     "cancel": "Cancel",
     "overlap": "This overlaps your entry on {date} ({start}–{end}). Change the times so the same hours aren't counted twice.",
-    "deleteFailed": "Couldn't delete the entry. Check your internet connection and try again."
+    "deleteFailed": "Couldn't delete the entry. Check your internet connection and try again.",
+    "deleted": "Entry deleted",
+    "undo": "Undo",
+    "plusHours": "{h}h",
+    "usualStart": "Usual start",
+    "workedFor": "Worked for",
+    "offlineSave": "No internet: the entry wasn't saved. Try again when you're back online."
   },
   "History": {
     "title": "Sheet history",
@@ -203,7 +212,13 @@
     "cancel": "Cancel",
     "apply": "Use this",
     "inkStrength": "Ink",
-    "inkStrengthHint": "Lighter ← → Bolder"
+    "inkStrengthHint": "Lighter ← → Bolder",
+    "language": "Language",
+    "appearance": "Appearance",
+    "themeAuto": "Automatic",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAutoHint": "Follows your phone's light / dark setting."
   },
   "Viewer": {
     "back": "Back",
@@ -226,7 +241,8 @@
     "testSending": "Sending…",
     "testSent": "Sent! It should appear in a few seconds.",
     "testNotRegistered": "This device isn't registered. Turn the reminder off and on again.",
-    "notConfigured": "Reminders aren't switched on for this site yet. Please ask the app admin."
+    "notConfigured": "Reminders aren't switched on for this site yet. Please ask the app admin.",
+    "daysLeft": "{count, plural, one {# day} other {# days}} left to submit your OT sheet (due on the 15th)."
   },
   "Install": {
     "title": "Install the app",

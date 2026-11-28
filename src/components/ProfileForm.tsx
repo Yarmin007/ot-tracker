@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { SignaturePad } from '@/components/SignaturePad';
 import { AvatarPicker } from '@/components/AvatarPicker';
-import { saveProfile } from '@/app/[locale]/settings/actions';
+import { saveProfile } from '@/app/[locale]/(app)/settings/actions';
 
 export type ProfileValues = {
   full_name?: string | null;
@@ -95,7 +95,12 @@ export function ProfileForm({
         <SignaturePad name="signature" initial={initial?.signature} />
       </section>
 
-      <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-app/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:bg-transparent pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      {/* Phones: pinned to the bottom (in Settings just above the bottom bar). */}
+      <div
+        className={`sticky -mx-4 px-4 py-3 bg-app/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:bg-transparent ${
+          mode === 'settings' ? 'bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30' : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+        }`}
+      >
         {notice && <p role="status" className="mb-2 text-sm font-semibold text-green-700">{notice}</p>}
         <button
           type="submit"

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DAY_KEYS, baseMinutesFor, baseUsedBefore, durationWords, findOverlap, isFriday, isSaturday, parseDateOnly, shortTime, slipBreakdown, type SlipTimes } from '@/lib/ot';
-import type { SlipActionResult } from '@/app/[locale]/dashboard/actions';
+import type { SlipActionResult } from '@/app/[locale]/(app)/dashboard/actions';
 import { useDurationWords } from '@/components/Duration';
 
 export type EditableSlip = {
@@ -24,6 +24,14 @@ const daysAgo = (n: number) => {
 };
 
 const fieldLabel = "block text-sm font-bold text-gray-700 mb-1.5";
+
+const toMinutes = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3, 5));
+const toClock = (minutes: number) => {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+/** Quick lengths for the end time, in minutes. */
+const LENGTHS = [60, 90, 120, 180];
 const inputBase =
   "block w-full border border-gray-300 rounded-xl bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#991525]/25 focus:border-[#991525]";
 
@@ -75,6 +83,27 @@ export function SlipForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The start times used most often, as one-tap shortcuts.
+  const usualStarts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of otherSlips) {
+      const c = shortTime(s.start_time);
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .filter(([, n]) => n > 1)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 3)
+      .map(([c]) => c);
+  }, [otherSlips]);
+  const length = start && end ? (toMinutes(end) - toMinutes(start) + 1440) % 1440 : 0;
+  /** Change the start time and keep the same length. */
+  const pickStart = (c: string) => {
+    setStart(c);
+    if (length > 0) setEnd(toClock(toMinutes(c) + length));
+  };
+  const lengthLabel = (m: number) => t('plusHours', { h: m % 60 ? `${Math.floor(m / 60)}½` : String(m / 60) });
+
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
   const friday = validDate && isFriday(date);
   const holiday = friday || holidayOn;
@@ -106,7 +135,15 @@ export function SlipForm({
       return;
     }
     setPending(true);
-    const result = await action(new FormData(e.currentTarget));
+    let result: SlipActionResult;
+    try {
+      result = await action(new FormData(e.currentTarget));
+    } catch {
+      // No internet (or the server couldn't be reached): say so instead of spinning forever.
+      setPending(false);
+      setError(t('offlineSave'));
+      return;
+    }
     setPending(false);
     if (!result.ok) {
       setError(
@@ -178,6 +215,28 @@ export function SlipForm({
                 className={`${inputBase} px-2 py-3 text-xl font-bold text-center tabular-nums`} />
             </div>
           </div>
+
+          {/* One-tap shortcuts: usual start times, and how long the work took */}
+          {(usualStarts.length > 0 || start) && (
+            <div className="mt-3 space-y-2">
+              {usualStarts.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500 me-1">{t('usualStart')}</span>
+                  {usualStarts.map((c) => (
+                    <button key={c} type="button" dir="ltr" onClick={() => pickStart(c)} className={`${chip(start === c)} tabular-nums`}>{c}</button>
+                  ))}
+                </div>
+              )}
+              {start && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500 me-1">{t('workedFor')}</span>
+                  {LENGTHS.map((m) => (
+                    <button key={m} type="button" onClick={() => setEnd(toClock(toMinutes(start) + m))} className={chip(length === m)}>{lengthLabel(m)}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {clash && (
             <p role="alert" className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 font-medium">

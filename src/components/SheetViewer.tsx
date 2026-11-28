@@ -73,7 +73,7 @@ export function SheetViewer({
               {pages.length > 1 && (
                 <p className="print:hidden text-xs font-semibold text-gray-500 mb-1.5">{t('page', { n: i + 1, total: pages.length })}</p>
               )}
-              <div className="bg-white rounded-lg sm:rounded-xl shadow-md ring-1 ring-black/5 overflow-hidden print:shadow-none print:ring-0 print:rounded-none" dangerouslySetInnerHTML={{ __html: svg }} />
+              <div className="bg-[#fff] rounded-lg sm:rounded-xl shadow-md ring-1 ring-black/5 overflow-hidden print:shadow-none print:ring-0 print:rounded-none" dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
           ))}
         </div>

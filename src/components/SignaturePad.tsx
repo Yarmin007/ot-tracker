@@ -159,7 +159,7 @@ export function SignaturePad({ name, initial }: { name: string; initial?: string
   return (
     <div>
       <input type="hidden" name={name} value={value} />
-      <div className="relative rounded-2xl border-2 border-dashed border-gray-300 bg-white overflow-hidden">
+      <div className="relative rounded-2xl border-2 border-dashed border-gray-300 bg-[#fff] overflow-hidden">
         <canvas
           ref={canvasRef}
           className="block w-full h-44 touch-none cursor-crosshair"

@@ -1,13 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { AppHeader } from '@/components/AppHeader';
 import { DashboardClient, type DashboardSlip } from '@/components/DashboardClient';
-import { getPeriodId } from '@/lib/ot';
+import { getPeriodId, todayInMaldives } from '@/lib/ot';
 import { fetchAllSlips } from '@/lib/slips';
-
-/** Today's date in the Maldives, as YYYY-MM-DD. */
-const todayInMaldives = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Indian/Maldives', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
 export default async function DashboardPage({
   params,
@@ -27,16 +22,13 @@ export default async function DashboardPage({
   const slips = await fetchAllSlips<DashboardSlip>(supabase, userId);
 
   return (
-    <div className={`min-h-screen bg-app ${locale === 'dv' ? 'text-base md:text-lg' : 'text-sm'}`}>
-      <AppHeader locale={locale} active="dashboard" />
-      <main className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <main className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <DashboardClient
           locale={locale}
           slips={slips}
           currentPeriodId={getPeriodId(todayInMaldives())}
           today={todayInMaldives()}
         />
-      </main>
-    </div>
+    </main>
   );
 }
