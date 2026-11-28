@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 
 const locales = ['en', 'dv'] as const;
 const ONBOARDED_COOKIE = 'ot_onboarded';
+const LOCALE_COOKIE = 'ot_locale';
 
 const handleI18nRouting = createMiddleware({
   locales,
@@ -15,6 +16,13 @@ const handleI18nRouting = createMiddleware({
 });
 
 export async function proxy(request: NextRequest) {
+  // The bare address (where the installed app starts) opens in the language
+  // last used (Dhivehi otherwise). Remembered further down.
+  if (request.nextUrl.pathname === '/' && request.cookies.get(LOCALE_COOKIE)?.value === 'en') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/en';
+    return NextResponse.redirect(url);
+  }
   const response = handleI18nRouting(request);
 
   // Refresh the Supabase session and write updated auth cookies onto the response.
@@ -45,6 +53,9 @@ export async function proxy(request: NextRequest) {
   if (!(locales as readonly string[]).includes(firstSegment)) return response;
   const locale = firstSegment;
   const rest = pathname.slice(locale.length + 1) || '/';
+  if (request.cookies.get(LOCALE_COOKIE)?.value !== locale) {
+    response.cookies.set(LOCALE_COOKIE, locale, { sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
+  }
 
   const redirectTo = (path: string) => {
     const redirect = NextResponse.redirect(new URL(`/${locale}${path}`, request.url));

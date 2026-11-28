@@ -182,5 +182,5 @@ function linkMessage(message: string | undefined, t: ReturnType<typeof useTransl
   const m = message ?? '';
   if (/already.*(linked|exists|registered)|identity_already_exists/i.test(m)) return t('googleTaken');
   if (/manual linking|linking is disabled|not enabled/i.test(m)) return t('linkingDisabled');
-  return m || t('linkFailed');
+  return t('linkFailed');
 }

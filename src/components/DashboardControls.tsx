@@ -20,7 +20,7 @@ export function PeriodSelect({
       <select
         aria-label={label}
         disabled={periods.length === 0}
-        className="appearance-none cursor-pointer bg-gray-50 border border-gray-200 text-gray-900 text-sm sm:text-base rounded-xl focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] block w-full ps-3 sm:ps-4 pe-9 py-3 font-bold shadow-sm truncate disabled:cursor-not-allowed disabled:opacity-60"
+        className="appearance-none cursor-pointer bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-xl focus:outline-none focus:ring-2 focus:ring-[#991525]/20 focus:border-[#991525] block w-full ps-3 sm:ps-4 pe-9 py-3 font-bold shadow-sm truncate disabled:cursor-not-allowed disabled:opacity-60"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

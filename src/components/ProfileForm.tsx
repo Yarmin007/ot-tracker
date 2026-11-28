@@ -70,16 +70,16 @@ export function ProfileForm({
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6 space-y-4">
         <div>
           <label htmlFor="fullName" className={labelClass}>{t('fullName')}</label>
-          <input id="fullName" name="fullName" autoComplete="name" required defaultValue={initial?.full_name ?? ''} className={inputClass} />
+          <input id="fullName" name="fullName" autoComplete="name" required maxLength={120} defaultValue={initial?.full_name ?? ''} className={inputClass} />
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="designation" className={labelClass}>{t('designation')}</label>
-            <input id="designation" name="designation" autoComplete="organization-title" required defaultValue={initial?.designation ?? ''} className={inputClass} />
+            <input id="designation" name="designation" autoComplete="organization-title" required maxLength={120} defaultValue={initial?.designation ?? ''} className={inputClass} />
           </div>
           <div>
             <label htmlFor="cardNo" className={labelClass}>{t('cardNo')}</label>
-            <input id="cardNo" name="cardNo" dir="ltr" required defaultValue={initial?.record_card_no ?? ''} className={inputClass} />
+            <input id="cardNo" name="cardNo" dir="ltr" required maxLength={40} defaultValue={initial?.record_card_no ?? ''} className={inputClass} />
           </div>
         </div>
         <div className="sm:max-w-xs">

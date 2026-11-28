@@ -16,6 +16,17 @@ async function currentUserId() {
   return { supabase, userId: (data?.claims?.sub as string | undefined) ?? null };
 }
 
+/** Longest "work done" text kept (the sheet's Details column fits far less anyway). */
+const MAX_REASON = 300;
+/** A real calendar date, YYYY-MM-DD (rejects e.g. 2026-02-31). */
+const isRealDate = (v: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
+/** HH:MM or HH:MM:SS within a day. */
+const isClock = (v: string) => /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(v);
+
 function readSlipForm(formData: FormData) {
   const date = String(formData.get('date') || '');
   const start = String(formData.get('start_time') || '');
@@ -23,7 +34,7 @@ function readSlipForm(formData: FormData) {
   const reason = String(formData.get('reason') || '').trim();
   const isHoliday = formData.get('is_holiday') === 'on' || isFriday(date);
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}/.test(start) || !/^\d{2}:\d{2}/.test(end) || !reason) {
+  if (!isRealDate(date) || !isClock(start) || !isClock(end) || !reason || reason.length > MAX_REASON) {
     return { error: 'invalid' as const };
   }
   if (start.slice(0, 5) === end.slice(0, 5)) return { error: 'sameTimes' as const };

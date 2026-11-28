@@ -250,6 +250,7 @@ export function SlipForm({
             name="reason"
             required
             rows={3}
+            maxLength={300}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('reasonPlaceholder')}

@@ -8,6 +8,21 @@ type SubscriptionJSON = { endpoint?: string; keys?: { p256dh?: string; auth?: st
 
 export type PushResult = { ok: true } | { ok: false; error: string };
 
+/**
+ * Browser push services (Chrome/Android, Apple, Firefox, Windows). The server
+ * later sends to the saved address, so only these hosts are accepted; anything
+ * else could make the server call an address of someone's choosing.
+ */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/];
+const isPushEndpoint = (endpoint: string) => {
+  try {
+    const url = new URL(endpoint);
+    return url.protocol === 'https:' && PUSH_HOSTS.some((h) => h.test(url.hostname));
+  } catch {
+    return false;
+  }
+};
+
 async function currentUser() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -21,7 +36,9 @@ export async function savePushSubscription(sub: SubscriptionJSON, locale: string
   const endpoint = sub.endpoint ?? '';
   const p256dh = sub.keys?.p256dh ?? '';
   const auth = sub.keys?.auth ?? '';
-  if (!endpoint.startsWith('https://') || !p256dh || !auth) return { ok: false, error: 'Invalid subscription.' };
+  if (!isPushEndpoint(endpoint) || !p256dh || !auth || p256dh.length > 200 || auth.length > 100) {
+    return { ok: false, error: 'Invalid subscription.' };
+  }
 
   // A phone that someone else signed in on before: the device now belongs to
   // this account. (That row isn't visible to this user, so the upsert below

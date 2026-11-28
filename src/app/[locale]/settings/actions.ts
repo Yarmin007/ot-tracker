@@ -28,6 +28,9 @@ export async function saveProfile(formData: FormData): Promise<ProfileResult> {
   if (!fullName || !designation || !cardNo || !Number.isFinite(salary) || salary < 0) {
     return { ok: false, error: 'required' };
   }
+  if (fullName.length > 120 || designation.length > 120 || cardNo.length > 40 || salary > 10_000_000) {
+    return { ok: false, error: 'Please check your details: one of them is too long.' };
+  }
   // Profile picture: a small JPEG/PNG data URL from the picker (or an existing https URL).
   const avatarOk = !avatar || avatar.startsWith('https://') || (/^data:image\/(jpeg|png);base64,/.test(avatar) && avatar.length <= MAX_SIGNATURE_LENGTH);
   if (!avatarOk) return { ok: false, error: 'Invalid profile picture.' };
