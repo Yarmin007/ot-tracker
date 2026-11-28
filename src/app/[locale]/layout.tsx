@@ -40,6 +40,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     applicationName: APP_TITLE.en,
     // Home-screen name on iPhone (kept short so it isn't cut off under the icon).
     appleWebApp: { capable: true, title: 'Hamad OT', statusBarStyle: 'default' },
+    // Chrome (especially on Android) offers to auto-translate Dhivehi pages and then
+    // keeps doing it, turning the app's own Dhivehi into machine-translated English.
+    // The app has its own language switch, so ask browsers not to translate it.
+    other: { google: 'notranslate' },
   };
 }
 
@@ -66,7 +70,8 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={direction}
-      className={`${inter.variable} ${mvWaheed.variable} ${faruma.variable} ${notoThaana.variable}`}
+      translate="no"
+      className={`notranslate ${inter.variable} ${mvWaheed.variable} ${faruma.variable} ${notoThaana.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -74,8 +79,10 @@ export default async function RootLayout({
             A plain async script: React 19 hoists and de-dupes it, whereas
             next/script's beforeInteractive triggers a "script tag" console error. */}
         <script async src="/install-prompt.js" />
+        {/* Reloads the page if a browser translates it despite the markers above. */}
+        <script async src="/no-translate.js" />
       </head>
-      <body className={`${fontClass} antialiased`}>
+      <body className={`notranslate ${fontClass} antialiased`} translate="no">
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
